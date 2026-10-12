@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Tokens de diseño: una sola paleta oscura (uso en gimnasio, AMOLED) y un solo acento. */
+@theme {
+  --color-fondo: #0b0b0d;
+  --color-superficie: #141417;
+  --color-superficie-2: #1c1c21;
+  --color-borde: #26262c;
+  --color-texto: #f4f4f5;
+  --color-texto-2: #a1a1aa;
+  --color-texto-3: #63636b;
+  --color-acento: #ffb020;
+  --color-acento-oscuro: #b57a0f;
+  --color-ok: #4ade80;
+  --color-alerta: #f87171;
+  --color-aviso: #fbbf24;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-tarjeta: 16px;
+  --radius-control: 12px;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+input, textarea { user-select: text; }
+
+/* Altura segura para notch y barra inferior */
+.pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); }
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+/* Botón grande de acción, pensado para una mano */
+.btn-grande {
+  @apply flex h-14 w-full items-center justify-center rounded-[var(--radius-control)] bg-acento text-base font-semibold text-black active:bg-acento-oscuro disabled:opacity-40;
+}
+.btn-secundario {
+  @apply flex h-12 items-center justify-center rounded-[var(--radius-control)] bg-superficie-2 px-4 text-sm font-medium text-texto active:bg-borde disabled:opacity-40;
+}
+.chip {
+  @apply inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-superficie-2 px-3 text-sm font-medium text-texto active:bg-borde;
+}
+.chip-activo { @apply bg-acento text-black; }
+.tarjeta { @apply rounded-[var(--radius-tarjeta)] bg-superficie p-4; }
+
+/* Scroll sin barra visible */
+.sin-scrollbar::-webkit-scrollbar { display: none; }
+.sin-scrollbar { scrollbar-width: none; }
+
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.aparecer { animation: aparecer .18s ease-out; }
