@@ -62,6 +62,20 @@ export function Ajustes() {
         <p className="text-[11px] text-texto-3">Las bandas por músculo son referencias para intermedios, no verdades: la respuesta al volumen es individual.</p>
       </Seccion>
 
+      <Seccion titulo="Discos (calculadora)">
+        <div className="flex items-center justify-between"><span className="text-sm">Barra olímpica</span><Stepper valor={a.pesoBarra} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarra: v })} sufijo="kg" /></div>
+        <div className="flex items-center justify-between"><span className="text-sm">Barra del Smith</span><Stepper valor={a.pesoBarraSmith} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarraSmith: v })} sufijo="kg" /></div>
+        <div>
+          <div className="mb-1 text-[11px] text-texto-3">Discos disponibles</div>
+          <div className="flex flex-wrap gap-1.5">
+            {[25, 20, 15, 10, 5, 2.5, 1.25, 0.5].map((d) => {
+              const on = a.discos.includes(d)
+              return <button key={d} type="button" className={`chip ${on ? 'chip-activo' : ''}`} onClick={() => repo.guardarAjustes({ discos: on ? a.discos.filter((x) => x !== d) : [...a.discos, d].sort((x, y) => y - x) })}>{d}</button>
+            })}
+          </div>
+        </div>
+      </Seccion>
+
       <Seccion titulo="Respaldo local">
         <div className="flex gap-2">
           <button type="button" className="btn-secundario flex-1" onClick={async () => { descargarJSON(`carga-${fechaLocal()}.json`, await exportarTodo()); aviso('Respaldo descargado.') }}>Exportar JSON</button>

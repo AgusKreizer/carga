@@ -196,6 +196,10 @@ export interface Ajustes {
   supabaseUrl: string
   supabaseAnonKey: string
   ultimoBackup: string | null
+  /** calculadora de discos */
+  pesoBarra: number
+  pesoBarraSmith: number
+  discos: number[]
 }
 
 /** Objetivo calculado por el motor para una serie de hoy */

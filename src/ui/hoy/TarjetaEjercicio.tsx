@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { DiaEjercicioSnapshot, Ejercicio, ObjetivoEjercicio, SerieLog } from '../../domain/types'
 import type { SesionPrevia } from '../../domain/coach/progresion'
-import { SelectorRir, Stepper } from '../componentes/basicos'
+import { Hoja, SelectorRir, Stepper } from '../componentes/basicos'
 import { kg, rirTexto } from '../../lib/formato'
+import { discosPorLado } from '../../lib/discos'
+import { useAjustes } from '../hooks'
 import { haceCuanto } from '../../lib/fechas'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 
@@ -35,6 +37,7 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series, e
   const [rir, setRir] = useState<number | null>(null)
   const [editando, setEditando] = useState<string | null>(null)
   const [extra, setExtra] = useState(false)
+  const [discos, setDiscos] = useState(false)
 
   // Al cambiar la serie en curso, prellenar carga y reps desde el objetivo; el RIR nunca.
   useEffect(() => {
@@ -119,7 +122,12 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series, e
               </div>
               <div className="flex items-end justify-between gap-2">
                 <div>
-                  <div className="mb-1 text-[11px] text-texto-3">Carga</div>
+                  <div className="mb-1 flex items-center gap-2 text-[11px] text-texto-3">
+                    Carga
+                    {(ejercicio.equipo === 'barra' || ejercicio.equipo === 'smith') && carga != null && carga > 0 && (
+                      <button type="button" className="rounded bg-superficie-2 px-1.5 py-0.5 text-[10px] text-texto-2" onClick={() => setDiscos(true)}>discos</button>
+                    )}
+                  </div>
                   <Stepper valor={carga} paso={paso} onCambio={setCarga} sufijo="kg" grande vacio="—" />
                 </div>
                 <div>
@@ -141,9 +149,40 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series, e
             <button type="button" className="py-1 text-texto-2" onClick={onSustituir}>Sustituir ejercicio</button>
             {completa && !extra && <button type="button" className="py-1 text-texto-2" onClick={() => setExtra(true)}>+ serie extra</button>}
           </div>
+          <HojaDiscos abierta={discos} onCerrar={() => setDiscos(false)} carga={carga ?? 0} smith={ejercicio.equipo === 'smith'} onElegir={(c) => { setCarga(c); setDiscos(false) }} />
         </div>
       )}
     </div>
+  )
+}
+
+function HojaDiscos({ abierta, onCerrar, carga, smith, onElegir }: { abierta: boolean; onCerrar: () => void; carga: number; smith: boolean; onElegir: (c: number) => void }) {
+  const ajustes = useAjustes()
+  if (!ajustes) return null
+  const barra = smith ? ajustes.pesoBarraSmith : ajustes.pesoBarra
+  const r = discosPorLado(carga, barra, ajustes.discos)
+  return (
+    <Hoja abierta={abierta} onCerrar={onCerrar} titulo={`${kg(carga)} kg · discos por lado`}>
+      <div className="mb-3 text-xs text-texto-2">Barra {smith ? 'Smith' : ''} de {kg(barra)} kg. Cambiá barra y discos en Ajustes.</div>
+      {r.porLado.length === 0 ? (
+        <div className="text-sm text-texto-2">Solo la barra.</div>
+      ) : (
+        <div className="flex flex-wrap items-end gap-1.5">
+          {r.porLado.map((d, i) => (
+            <div key={i} className="flex flex-col items-center justify-end rounded-md bg-acento text-black" style={{ width: 34 + Math.min(d, 25) * 1.2, height: 48 + Math.min(d, 25) * 2 }}>
+              <span className="pb-1 text-xs font-semibold">{kg(d)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {r.diferencia !== 0 && (
+        <div className="mt-3 text-sm text-aviso">
+          Con tus discos llegás a {kg(r.alcanzado)} kg ({r.diferencia > 0 ? '−' : '+'}{kg(Math.abs(r.diferencia))}).
+          <button type="button" className="ml-2 underline" onClick={() => onElegir(r.alcanzado)}>Usar {kg(r.alcanzado)}</button>
+        </div>
+      )}
+      <button type="button" className="btn-secundario mt-4 w-full" onClick={onCerrar}>Cerrar</button>
+    </Hoja>
   )
 }
 

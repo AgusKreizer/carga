@@ -18,6 +18,9 @@ export const AJUSTES_DEFAULT: Ajustes = {
   supabaseUrl: 'https://znqqhqirivfzabbjexxj.supabase.co',
   supabaseAnonKey: 'sb_publishable_0G5Tjw4eWR48MVFSOs_Rzw_2Utj6271',
   ultimoBackup: null,
+  pesoBarra: 20,
+  pesoBarraSmith: 10,
+  discos: [25, 20, 15, 10, 5, 2.5, 1.25],
 }
 
 /** Carga catálogo, plan de Agus y ajustes si la base está vacía. Idempotente. */
@@ -42,9 +45,14 @@ export async function sembrar(): Promise<void> {
     const ajustes = await db.ajustes.get('global')
     if (!ajustes) {
       await db.ajustes.add(AJUSTES_DEFAULT)
-    } else if (!ajustes.supabaseUrl || !ajustes.supabaseAnonKey) {
-      // instalaciones previas sin nube configurada: toman la del proyecto de Agus
-      await db.ajustes.update('global', { supabaseUrl: AJUSTES_DEFAULT.supabaseUrl, supabaseAnonKey: AJUSTES_DEFAULT.supabaseAnonKey })
+    } else {
+      // instalaciones previas: completan claves nuevas y la nube del proyecto de Agus si no estaba
+      const completos: Ajustes = { ...AJUSTES_DEFAULT, ...ajustes }
+      if (!completos.supabaseUrl || !completos.supabaseAnonKey) {
+        completos.supabaseUrl = AJUSTES_DEFAULT.supabaseUrl
+        completos.supabaseAnonKey = AJUSTES_DEFAULT.supabaseAnonKey
+      }
+      await db.ajustes.put(completos)
     }
   })
 }
