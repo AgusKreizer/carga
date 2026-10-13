@@ -76,7 +76,7 @@ function EditorLinea({ linea, otras, onCerrar }: { linea: DiaEjercicio; otras: D
   const set = (c: Partial<DiaEjercicio>) => repo.actualizarLinea(linea.id, c)
   return (
     <div className="space-y-4">
-      {ej && <p className="text-sm text-texto-2">{ej.porQue}</p>}
+      {ej && <p className="text-sm text-texto-2">{ej.porQue} <a className="text-acento" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ej.nombre + ' técnica')}`} target="_blank" rel="noreferrer">Ver técnica</a></p>}
       <Fila nombre="Series"><Stepper valor={linea.series} paso={1} min={1} onCambio={(v) => set({ series: v })} /></Fila>
       <Fila nombre="Reps mínimas"><Stepper valor={linea.repsMin} paso={1} min={1} onCambio={(v) => set({ repsMin: v, repsMax: Math.max(v, linea.repsMax) })} /></Fila>
       <Fila nombre="Reps máximas"><Stepper valor={linea.repsMax} paso={1} min={linea.repsMin} onCambio={(v) => set({ repsMax: v })} /></Fila>

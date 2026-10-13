@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
   Ajustes, Bloque, CoachEvento, Dia, DiaEjercicio, Ejercicio, Medida,
-  PesoCorporal, Programa, SerieLog, Sesion,
+  PesoCorporal, Programa, SerieLog, Sesion, Foto,
 } from '../domain/types'
 
 export class CargaDB extends Dexie {
@@ -16,6 +16,7 @@ export class CargaDB extends Dexie {
   medidas!: EntityTable<Medida, 'id'>
   coachEventos!: EntityTable<CoachEvento, 'id'>
   ajustes!: EntityTable<Ajustes, 'id'>
+  fotos!: EntityTable<Foto, 'id'>
 
   constructor() {
     super('carga')
@@ -31,6 +32,10 @@ export class CargaDB extends Dexie {
       medidas: 'id, fecha',
       coachEventos: 'id, estado, fecha, ejercicioId',
       ajustes: 'id',
+    })
+    // v2: fotos de progreso (blobs locales; no entran en el respaldo JSON por tamaño)
+    this.version(2).stores({
+      fotos: 'id, fecha, angulo',
     })
   }
 }

@@ -164,6 +164,17 @@ export interface Medida {
   activo: boolean
 }
 
+export type AnguloFoto = 'frente' | 'perfil' | 'espalda'
+
+export interface Foto {
+  id: string
+  fecha: string
+  angulo: AnguloFoto
+  /** JPEG comprimido, lado mayor 1080 px */
+  blob: Blob
+  activo: boolean
+}
+
 export type TipoCoachEvento =
   | 'subir-carga' | 'sumar-serie' | 'cambiar-ejercicio' | 'deload-anticipado'
   | 'revisar-recuperacion' | 'bajar-carga-por-pausa' | 'pr' | 'pedir-rir' | 'dolor'

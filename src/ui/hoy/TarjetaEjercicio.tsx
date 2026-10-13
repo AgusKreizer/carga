@@ -168,6 +168,7 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
 
           <div className="flex justify-between text-sm">
             <button type="button" className="py-1 text-texto-2" onClick={onSustituir}>Sustituir ejercicio</button>
+            <a className="py-1 text-texto-2" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ejercicio.nombre + ' técnica')}`} target="_blank" rel="noreferrer">Ver técnica</a>
             {completa && !extra && <button type="button" className="py-1 text-texto-2" onClick={() => setExtra(true)}>+ serie extra</button>}
           </div>
           <HojaDiscos abierta={discos} onCerrar={() => setDiscos(false)} carga={carga ?? 0} smith={ejercicio.equipo === 'smith'} onElegir={(c) => { setCarga(c); setDiscos(false) }} />

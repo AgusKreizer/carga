@@ -8,6 +8,7 @@ import { PesoHoja } from '../hoy/Hoy'
 import * as repo from '../../data/repo'
 import { COLOR, Dato, ESTILO_TOOLTIP } from './comun'
 import { FuerzaVsPeso } from './FuerzaVsPeso'
+import { Fotos } from './Fotos'
 
 export function Cuerpo() {
   const pesos = usePesos()
@@ -77,6 +78,7 @@ export function Cuerpo() {
           </table>
         )}
       </div>
+      <Fotos />
       <PesoHoja abierta={pesoAbierto} onCerrar={() => setPesoAbierto(false)} inicial={pesos.find((p) => p.fecha === hoy)?.kg ?? pesos[pesos.length - 1]?.kg ?? 76} fecha={hoy} />
       <Hoja abierta={medidaAbierta} onCerrar={() => setMedidaAbierta(false)} titulo="Perímetros de hoy">
         <FormMedida onGuardar={async (m) => { await repo.guardarMedida({ fecha: hoy, ...m }); setMedidaAbierta(false) }} />

@@ -7,6 +7,7 @@ import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
 import { fechaLocal, haceCuanto } from '../../lib/fechas'
 import { pedirPermisoNotificaciones, permisoNotificaciones } from '../../lib/notificaciones'
+import { generarICS } from '../../lib/calendario-ics'
 
 export function Ajustes() {
   const a = useAjustes()
@@ -67,6 +68,10 @@ export function Ajustes() {
         <NotificacionesToggle />
       </Seccion>
 
+      <Seccion titulo="Recordatorios">
+        <Recordatorios minutos={a.minutosSesion} onAviso={aviso} />
+      </Seccion>
+
       <Seccion titulo="Discos (calculadora)">
         <div className="flex items-center justify-between"><span className="text-sm">Barra olímpica</span><Stepper valor={a.pesoBarra} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarra: v })} sufijo="kg" /></div>
         <div className="flex items-center justify-between"><span className="text-sm">Barra del Smith</span><Stepper valor={a.pesoBarraSmith} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarraSmith: v })} sufijo="kg" /></div>
@@ -121,6 +126,22 @@ export function Ajustes() {
       </Seccion>
 
       <div className="pb-6 text-center text-[11px] text-texto-3">Carga · datos locales en este dispositivo</div>
+    </div>
+  )
+}
+
+function Recordatorios({ minutos, onAviso }: { minutos: number; onAviso: (t: string) => void }) {
+  const [dias, setDias] = useState<number[]>([0, 1, 3, 4])
+  const [hora, setHora] = useState('18:30')
+  const nombres = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  return (
+    <div className="space-y-3">
+      <div className="text-sm text-texto-2">La web no puede avisarte a futuro sin un servidor. El atajo: un evento semanal en tu calendario, con alarma una hora antes.</div>
+      <div className="flex gap-1.5">{nombres.map((n, i) => <button key={i} type="button" className={`chip flex-1 ${dias.includes(i) ? 'chip-activo' : ''}`} onClick={() => setDias(dias.includes(i) ? dias.filter((d) => d !== i) : [...dias, i].sort())}>{n}</button>)}</div>
+      <div className="flex items-center justify-between gap-3">
+        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="h-12 flex-1 rounded-xl bg-superficie-2 px-3 text-base outline-none" />
+        <button type="button" className="btn-secundario shrink-0" disabled={!dias.length} onClick={() => { descargarTexto(`carga-entrenar.ics`, generarICS(dias, hora, minutos), 'text/calendar'); onAviso('Abrí el archivo .ics y agregalo a tu calendario.') }}>Agregar al calendario</button>
+      </div>
     </div>
   )
 }
