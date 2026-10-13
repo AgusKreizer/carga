@@ -14,7 +14,10 @@ const SUBS: [Sub, string][] = [
 ]
 
 export function Progreso() {
-  const [sub, setSub] = useState<Sub>('tablero')
+  const [sub, setSub] = useState<Sub>(() => {
+    const q = new URLSearchParams(location.search).get('sub') as Sub | null
+    return q && SUBS.some(([k]) => k === q) ? q : 'tablero'
+  })
   const [ejercicio, setEjercicio] = useState<string | null>(null)
   return (
     <div className="space-y-3 pt-1">

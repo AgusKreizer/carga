@@ -17,7 +17,11 @@ const TABS: { id: Tab; nombre: string; icono: string }[] = [
 ]
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('hoy')
+  // ?tab=plan|progreso|ajustes abre directo esa pestaña (links y notificaciones)
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = new URLSearchParams(location.search).get('tab') as Tab | null
+    return t && ['hoy', 'plan', 'progreso', 'ajustes'].includes(t) ? t : 'hoy'
+  })
   const sesion = useSesionActiva()
   const enSesion = !!sesion && tab === 'hoy'
   const [rutinaEntrante, setRutinaEntrante] = useState<RutinaCompartida | null>(null)
