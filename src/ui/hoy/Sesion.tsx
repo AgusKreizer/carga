@@ -62,17 +62,18 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   }, [series])
 
   const seriesPlan = (l: DiaEjercicioSnapshot) => info[l.id]?.objetivo.series.length ?? l.series
-  const pendientes = (l: DiaEjercicioSnapshot) => Math.max(0, seriesPlan(l) - (seriesPorLinea[l.id]?.length ?? 0))
+  const trabajoDe = (id: string) => (seriesPorLinea[id] ?? []).filter((s) => !s.calentamiento)
+  const pendientes = (l: DiaEjercicioSnapshot) => Math.max(0, seriesPlan(l) - trabajoDe(l.id).length)
 
   // La tarjeta activa es la primera con series pendientes, salvo que el usuario haya elegido otra.
   const activaAuto = sesion.snapshot.find((l) => pendientes(l) > 0)?.id ?? null
   const activa = expandida ?? activaAuto
 
-  const hechas = series.length
+  const hechas = series.filter((s) => !s.calentamiento).length
   const totales = sesion.snapshot.reduce((a, l) => a + seriesPlan(l), 0)
 
   const registrar = useCallback(
-    async (l: DiaEjercicioSnapshot, datos: { carga: number; reps: number; rir: number | null; orden: number; objetivoCarga: number | null; objetivoReps: number | null }) => {
+    async (l: DiaEjercicioSnapshot, datos: { carga: number; reps: number; rir: number | null; orden: number; objetivoCarga: number | null; objetivoReps: number | null; calentamiento?: boolean }) => {
       if (guardando) return
       setGuardando(true)
       try {
@@ -89,8 +90,9 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
           carga: datos.carga,
           reps: datos.reps,
           rir: datos.rir,
-          calentamiento: false,
+          calentamiento: !!datos.calentamiento,
         })
+        if (datos.calentamiento) return
         // Superserie: si el par tiene series pendientes, se pasa a él sin descanso largo.
         const par = l.superserieCon ? sesion.snapshot.find((x) => x.id === l.superserieCon) : null
         const parPendiente = par && pendientes(par) > 0
@@ -151,6 +153,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
             ultima={info[l.id]?.ultima}
             series={seriesPorLinea[l.id] ?? []}
             expandida={activa === l.id}
+            primero={sesion.snapshot[0]?.id === l.id}
             superserieNombre={l.superserieCon ? sesion.snapshot.find((x) => x.id === l.superserieCon)?.ejercicioNombre : undefined}
             onExpandir={() => setExpandida(activa === l.id ? '' : l.id)}
             onRegistrar={(d) => registrar(l, d)}

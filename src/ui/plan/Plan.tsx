@@ -9,6 +9,8 @@ import { EditorDia } from './EditorDia'
 import { estimarMinutos } from '../hoy/Hoy'
 import { nuevoId } from '../../lib/ids'
 import { lunesDe, fechaLocal } from '../../lib/fechas'
+import { InformeBloque } from './InformeBloque'
+import { linkDeRutina } from '../../data/compartir'
 
 export function Plan() {
   const plan = usePlan()
@@ -16,6 +18,8 @@ export function Plan() {
   const ajustes = useAjustes()
   const [diaAbierto, setDiaAbierto] = useState<Dia | null>(null)
   const [bloqueAbierto, setBloqueAbierto] = useState(false)
+  const [informeAbierto, setInformeAbierto] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   if (plan === undefined) return null
   if (plan === null) return <Vacio titulo="Sin plan" detalle="Todavía no hay un programa activo." />
@@ -36,6 +40,23 @@ export function Plan() {
         </div>
       </button>
 
+      <div className="flex gap-2">
+        <button type="button" className="btn-secundario flex-1" onClick={() => setInformeAbierto(true)}>Informe del bloque</button>
+        <button
+          type="button"
+          className="btn-secundario flex-1"
+          onClick={async () => {
+            const url = await linkDeRutina(plan, ejercicios)
+            try {
+              if (navigator.share) await navigator.share({ title: plan.programa.nombre, text: 'Mi rutina en Carga', url })
+              else { await navigator.clipboard.writeText(url); setAviso('Link copiado. Quien lo abra puede importar la rutina.') }
+            } catch { /* cancelado */ }
+            setTimeout(() => setAviso(null), 4000)
+          }}
+        >Compartir rutina</button>
+      </div>
+      {aviso && <div className="rounded-xl bg-superficie-2 px-3 py-2 text-sm">{aviso}</div>}
+
       <div className="space-y-2">
         {plan.dias.map((d) => {
           const ls = plan.lineas.filter((l) => l.diaId === d.id)
@@ -55,6 +76,10 @@ export function Plan() {
       </div>
 
       <PanelVolumen lineas={plan.lineas.filter((l) => !plan.dias.find((d) => d.id === l.diaId)?.opcional)} lineasOpcionales={plan.lineas.filter((l) => plan.dias.find((d) => d.id === l.diaId)?.opcional)} factor={ajustes?.factorIndirecto ?? 0.5} bandas={ajustes?.bandas ?? {}} prioridades={ajustes?.prioridades ?? []} />
+
+      <Hoja abierta={informeAbierto} onCerrar={() => setInformeAbierto(false)} titulo={`Informe · ${plan.bloque.nombre}`}>
+        <InformeBloque plan={plan} />
+      </Hoja>
 
       <Hoja abierta={bloqueAbierto} onCerrar={() => setBloqueAbierto(false)} titulo="Bloque">
         <EditorBloque plan={plan} onCerrar={() => setBloqueAbierto(false)} />

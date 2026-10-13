@@ -1,10 +1,12 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Hoy } from './ui/hoy/Hoy'
 import { Plan } from './ui/plan/Plan'
 const Progreso = lazy(() => import('./ui/progreso/Progreso').then((m) => ({ default: m.Progreso })))
 import { Ajustes } from './ui/ajustes/Ajustes'
 import { useSesionActiva } from './ui/hooks'
 import { LimiteError } from './ui/componentes/LimiteError'
+import { Hoja } from './ui/componentes/basicos'
+import { importarRutina, leerRutinaDelHash, type RutinaCompartida } from './data/compartir'
 
 type Tab = 'hoy' | 'plan' | 'progreso' | 'ajustes'
 
@@ -18,6 +20,14 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('hoy')
   const sesion = useSesionActiva()
   const enSesion = !!sesion && tab === 'hoy'
+  const [rutinaEntrante, setRutinaEntrante] = useState<RutinaCompartida | null>(null)
+  useEffect(() => {
+    if (!location.hash.includes('rutina=')) return
+    leerRutinaDelHash(location.hash).then((r) => {
+      history.replaceState(null, '', location.pathname)
+      if (r) setRutinaEntrante(r)
+    })
+  }, [])
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col">
@@ -49,6 +59,21 @@ export default function App() {
           {tab === 'ajustes' && <Ajustes />}
         </LimiteError>
       </main>
+
+      <Hoja abierta={!!rutinaEntrante} onCerrar={() => setRutinaEntrante(null)} titulo="Te compartieron una rutina">
+        {rutinaEntrante && (
+          <div className="space-y-3">
+            <div className="text-lg font-semibold">{rutinaEntrante.nombre}</div>
+            {rutinaEntrante.descripcion && <p className="text-sm text-texto-2">{rutinaEntrante.descripcion}</p>}
+            <ul className="space-y-1 text-sm">
+              {rutinaEntrante.dias.map((d, i) => <li key={i} className="flex justify-between"><span>{d.nombre}{d.opcional ? <span className="ml-1 text-xs text-texto-3">opcional</span> : ''}</span><span className="text-texto-2">{d.lineas.length} ejercicios</span></li>)}
+            </ul>
+            <p className="text-xs text-texto-3">Se importa como programa nuevo y queda activo. Tu plan actual no se borra: queda guardado, inactivo. El historial no se toca.</p>
+            <button type="button" className="btn-grande" onClick={async () => { await importarRutina(rutinaEntrante); setRutinaEntrante(null); setTab('plan') }}>Importar y activar</button>
+            <button type="button" className="btn-secundario w-full" onClick={() => setRutinaEntrante(null)}>Ahora no</button>
+          </div>
+        )}
+      </Hoja>
 
       {tab !== 'ajustes' && (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-borde bg-fondo/95 backdrop-blur">

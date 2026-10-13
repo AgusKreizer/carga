@@ -5,6 +5,7 @@ import { Hoja, SelectorRir, Stepper } from '../componentes/basicos'
 import { kg, rirTexto } from '../../lib/formato'
 import { discosPorLado } from '../../lib/discos'
 import { useAjustes } from '../hooks'
+import { calentamientoSugerido } from '../../domain/coach/calentamiento'
 import { haceCuanto } from '../../lib/fechas'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 
@@ -16,15 +17,18 @@ interface Props {
   series: SerieLog[]
   expandida: boolean
   superserieNombre?: string
+  primero?: boolean
   guardando: boolean
   onExpandir: () => void
-  onRegistrar: (d: { carga: number; reps: number; rir: number | null; orden: number; objetivoCarga: number | null; objetivoReps: number | null }) => void
+  onRegistrar: (d: { carga: number; reps: number; rir: number | null; orden: number; objetivoCarga: number | null; objetivoReps: number | null; calentamiento?: boolean }) => void
   onDeshacer: (serieId: string) => void
   onEditar: (serieId: string, cambios: Partial<SerieLog>) => void
   onSustituir: () => void
 }
 
-export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series, expandida, superserieNombre, guardando, onExpandir, onRegistrar, onDeshacer, onEditar, onSustituir }: Props) {
+export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: todas, expandida, superserieNombre, primero, guardando, onExpandir, onRegistrar, onDeshacer, onEditar, onSustituir }: Props) {
+  const series = todas.filter((s) => !s.calentamiento)
+  const calentamientos = todas.filter((s) => s.calentamiento)
   const planificadas = objetivo?.series.length ?? linea.series
   const hechas = series.length
   const completa = hechas >= planificadas
@@ -91,6 +95,23 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series, e
           )}
 
           {(linea.nota || ejercicio.nota) && <div className="text-xs text-texto-2">{linea.nota || ejercicio.nota}</div>}
+
+          {series.length === 0 && calentamientos.length === 0 && ESCOMPUESTO.includes(ejercicio.patron) && (carga ?? 0) >= 30 && (() => {
+            const sug = calentamientoSugerido(carga ?? 0, paso, !!primero)
+            if (!sug.length) return null
+            return (
+              <div className="flex items-center justify-between rounded-xl bg-superficie-2 px-3 py-2 text-sm">
+                <div>
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-texto-3">Calentamiento</div>
+                  <div className="text-texto-2">{sug.map((s) => `${kg(s.carga)}×${s.reps}`).join(' · ')}</div>
+                </div>
+                <button type="button" className="chip" disabled={guardando} onClick={() => sug.forEach((s, i) => onRegistrar({ carga: s.carga, reps: s.reps, rir: 4, orden: i + 1, objetivoCarga: null, objetivoReps: null, calentamiento: true }))}>Hecho</button>
+              </div>
+            )
+          })()}
+          {calentamientos.length > 0 && series.length === 0 && (
+            <div className="text-[11px] text-texto-3">Calentamiento: {calentamientos.map((s) => `${kg(s.carga)}×${s.reps}`).join(' · ')}</div>
+          )}
 
           {series.length > 0 && (
             <ul className="space-y-1.5">
@@ -204,6 +225,8 @@ function EditarSerie({ serie, paso, rirObjetivo, onGuardar, onCancelar }: { seri
     </div>
   )
 }
+
+const ESCOMPUESTO: Ejercicio['patron'][] = ['empuje-horizontal', 'empuje-vertical', 'tiron-vertical', 'tiron-horizontal', 'rodilla-dominante', 'cadera-dominante']
 
 export function resumenSeries(series: SerieLog[]): string {
   if (!series.length) return '—'
