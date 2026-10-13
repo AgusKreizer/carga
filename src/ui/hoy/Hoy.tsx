@@ -4,6 +4,8 @@ import { useAjustes, useEventosPendientes, useMapaEjercicios, usePlan, usePesos,
 import { calcularFatiga } from '../../domain/coach/fatiga'
 import { consejoDeHoy } from '../../domain/coach/diaInteligente'
 import { Sesion } from './Sesion'
+import { ResumenSemanal } from './ResumenSemanal'
+import { InstalarBanner } from './InstalarBanner'
 import { Hoja, Stepper, Vacio } from '../componentes/basicos'
 import { ahoraISO, fechaConDia, fechaLocal, haceCuanto } from '../../lib/fechas'
 import { kg } from '../../lib/formato'
@@ -109,6 +111,9 @@ function Inicio() {
       )}
 
       {eventos.length > 0 && <Avisos eventos={eventos} />}
+
+      <ResumenSemanal />
+      <InstalarBanner />
 
       <div className="tarjeta flex items-center justify-between">
         <div>

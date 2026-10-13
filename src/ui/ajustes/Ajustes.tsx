@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
-import { descargarJSON, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
+import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
 import { bajarBackup, cerrarSesionNube, enviarMagicLink, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
@@ -87,6 +87,7 @@ export function Ajustes() {
           <button type="button" className="btn-secundario flex-1" onClick={() => archivo.current?.click()}>Restaurar…</button>
           <input ref={archivo} type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) restaurarArchivo(f); e.target.value = '' }} />
         </div>
+        <button type="button" className="btn-secundario w-full" onClick={async () => { descargarTexto(`carga-series-${fechaLocal()}.csv`, await exportarCSV()); aviso('CSV descargado.') }}>Exportar series a CSV (Excel)</button>
         <p className="text-[11px] text-texto-3">El historial es lo más valioso. Exportá cada tanto aunque uses la nube.</p>
       </Seccion>
 

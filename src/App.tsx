@@ -3,7 +3,8 @@ import { Hoy } from './ui/hoy/Hoy'
 import { Plan } from './ui/plan/Plan'
 const Progreso = lazy(() => import('./ui/progreso/Progreso').then((m) => ({ default: m.Progreso })))
 import { Ajustes } from './ui/ajustes/Ajustes'
-import { useSesionActiva } from './ui/hooks'
+import { useAjustes, useSesionActiva, useSesionesTerminadas } from './ui/hooks'
+import { Onboarding } from './ui/onboarding/Onboarding'
 import { LimiteError } from './ui/componentes/LimiteError'
 import { Hoja } from './ui/componentes/basicos'
 import { importarRutina, leerRutinaDelHash, type RutinaCompartida } from './data/compartir'
@@ -25,6 +26,10 @@ export default function App() {
   const sesion = useSesionActiva()
   const enSesion = !!sesion && tab === 'hoy'
   const [rutinaEntrante, setRutinaEntrante] = useState<RutinaCompartida | null>(null)
+  const ajustes = useAjustes()
+  const terminadas = useSesionesTerminadas(1)
+  const [onboardingCerrado, setOnboardingCerrado] = useState(false)
+  const mostrarOnboarding = !!ajustes && !ajustes.onboardingHecho && terminadas.length === 0 && !onboardingCerrado && !rutinaEntrante
   useEffect(() => {
     if (!location.hash.includes('rutina=')) return
     leerRutinaDelHash(location.hash).then((r) => {
@@ -63,6 +68,8 @@ export default function App() {
           {tab === 'ajustes' && <Ajustes />}
         </LimiteError>
       </main>
+
+      <Onboarding abierto={mostrarOnboarding} onCerrar={() => setOnboardingCerrado(true)} permitirSaltar />
 
       <Hoja abierta={!!rutinaEntrante} onCerrar={() => setRutinaEntrante(null)} titulo="Te compartieron una rutina">
         {rutinaEntrante && (

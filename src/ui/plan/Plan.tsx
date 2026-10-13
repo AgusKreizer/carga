@@ -11,6 +11,7 @@ import { nuevoId } from '../../lib/ids'
 import { lunesDe, fechaLocal } from '../../lib/fechas'
 import { InformeBloque } from './InformeBloque'
 import { linkDeRutina } from '../../data/compartir'
+import { Onboarding } from '../onboarding/Onboarding'
 
 export function Plan() {
   const plan = usePlan()
@@ -19,6 +20,7 @@ export function Plan() {
   const [diaAbierto, setDiaAbierto] = useState<Dia | null>(null)
   const [bloqueAbierto, setBloqueAbierto] = useState(false)
   const [informeAbierto, setInformeAbierto] = useState(false)
+  const [nuevaRutina, setNuevaRutina] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
   if (plan === undefined) return null
@@ -73,6 +75,8 @@ export function Plan() {
         <button type="button" className="btn-secundario w-full" onClick={async () => { const n = prompt('Nombre del día'); if (n) await repo.agregarDia(plan.bloque.id, n, true) }}>
           + Agregar día
         </button>
+        <button type="button" className="w-full py-2 text-sm text-texto-2" onClick={() => setNuevaRutina(true)}>Generar otra rutina (el plan actual queda guardado)</button>
+        <Onboarding abierto={nuevaRutina} onCerrar={() => setNuevaRutina(false)} permitirSaltar />
       </div>
 
       <PanelVolumen lineas={plan.lineas.filter((l) => !plan.dias.find((d) => d.id === l.diaId)?.opcional)} lineasOpcionales={plan.lineas.filter((l) => plan.dias.find((d) => d.id === l.diaId)?.opcional)} factor={ajustes?.factorIndirecto ?? 0.5} bandas={ajustes?.bandas ?? {}} prioridades={ajustes?.prioridades ?? []} />

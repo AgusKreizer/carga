@@ -284,6 +284,17 @@ export async function actualizarBloque(id: string, cambios: Partial<Bloque>): Pr
   await db.bloques.update(id, cambios)
 }
 
+/** Activa un programa nuevo (generado o importado). Los anteriores quedan inactivos; el historial no se toca. */
+export async function activarPrograma(programa: Programa, bloque: Bloque, dias: Dia[], lineas: DiaEjercicio[]): Promise<void> {
+  await db.transaction('rw', [db.programas, db.bloques, db.dias, db.diaEjercicios], async () => {
+    await db.programas.toCollection().modify({ activo: false })
+    await db.programas.add({ ...programa, activo: true })
+    await db.bloques.add(bloque)
+    await db.dias.bulkAdd(dias)
+    await db.diaEjercicios.bulkAdd(lineas)
+  })
+}
+
 export async function crearEjercicioCustom(datos: Omit<Ejercicio, 'id' | 'custom' | 'activo' | 'actualizado'>): Promise<Ejercicio> {
   const e: Ejercicio = { ...datos, id: nuevoId(), custom: true, activo: true, actualizado: ahoraISO() }
   await db.ejercicios.add(e)
