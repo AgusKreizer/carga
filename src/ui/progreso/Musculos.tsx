@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAjustes, useMapaEjercicios, useSesionesTerminadas, useTodasLasSeries } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
@@ -7,6 +7,9 @@ import { calcularFatiga, nivelFatiga } from '../../domain/coach/fatiga'
 import { ahoraISO, fechaCorta, fechaLocal, haceCuanto, lunesDe, sumarDias } from '../../lib/fechas'
 import { LEYENDA_FATIGA, LEYENDA_VOLUMEN, Leyenda, MapaCuerpo, SIN_DATO } from './MapaCuerpo'
 import { COLOR, ESTILO_TOOLTIP } from './comun'
+
+const Cuerpo3D = lazy(() => import('./Cuerpo3D'))
+const CLAVE_3D = 'carga.vista3d'
 
 type Modo = 'volumen' | 'fatiga'
 const ORDEN: MusculoId[] = ['pecho', 'espalda', 'deltLat', 'deltPost', 'triceps', 'biceps', 'cuads', 'isquios', 'gluteos', 'gemelos', 'abs']
@@ -19,6 +22,9 @@ export function Musculos() {
   const [modo, setModo] = useState<Modo>('volumen')
   const [sel, setSel] = useState<MusculoId | null>(null)
   const [semanaOffset, setSemanaOffset] = useState(0)
+  const [vista3d, setVista3d] = useState<boolean>(() => { try { return localStorage.getItem(CLAVE_3D) === '1' } catch { return false } })
+  const [giro, setGiro] = useState(0)
+  const cambiarVista = (v: boolean) => { setVista3d(v); try { localStorage.setItem(CLAVE_3D, v ? '1' : '0') } catch { /* sin storage */ } }
   const factor = ajustes?.factorIndirecto ?? 0.5
   const bandas = ajustes?.bandas ?? {}
 
@@ -80,6 +86,10 @@ export function Musculos() {
               ? `Series por músculo · ${semanaOffset === 0 ? 'esta semana' : semanaOffset === 1 ? 'semana pasada' : `semana del ${vista?.label}`}`
               : 'Fatiga estimada · ahora'}
           </div>
+          <div className="flex gap-1">
+            <button type="button" className={`chip h-7 text-xs ${!vista3d ? 'chip-activo' : ''}`} onClick={() => cambiarVista(false)}>2D</button>
+            <button type="button" className={`chip h-7 text-xs ${vista3d ? 'chip-activo' : ''}`} onClick={() => cambiarVista(true)}>3D</button>
+          </div>
           {modo === 'volumen' && (
             <div className="flex gap-1">
               <button type="button" className="chip h-7 min-w-7 text-xs" disabled={semanaOffset >= 7} onClick={() => setSemanaOffset(semanaOffset + 1)}>‹</button>
@@ -87,7 +97,19 @@ export function Musculos() {
             </div>
           )}
         </div>
-        <MapaCuerpo colorDe={modo === 'volumen' ? colorVolumen : colorFatiga} seleccionado={sel} onTocar={(m) => setSel(sel === m ? null : m)} />
+        {vista3d ? (
+          <div className="relative">
+            <Suspense fallback={<div className="flex h-80 items-center justify-center text-sm text-texto-3">Cargando 3D…</div>}>
+              <Cuerpo3D colorDe={modo === 'volumen' ? colorVolumen : colorFatiga} seleccionado={sel} onTocar={(m) => setSel(sel === m ? null : m)} giro={giro} />
+            </Suspense>
+            <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1.5">
+              <button type="button" className={`chip h-7 text-xs ${Math.abs(((giro % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) < 0.1 ? 'chip-activo' : ''}`} onClick={() => setGiro(0)}>Frente</button>
+              <button type="button" className={`chip h-7 text-xs ${Math.abs((((giro % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI) < 0.1 ? 'chip-activo' : ''}`} onClick={() => setGiro(Math.PI)}>Espalda</button>
+            </div>
+          </div>
+        ) : (
+          <MapaCuerpo colorDe={modo === 'volumen' ? colorVolumen : colorFatiga} seleccionado={sel} onTocar={(m) => setSel(sel === m ? null : m)} />
+        )}
         <div className="mt-3 min-h-10 rounded-xl bg-superficie-2 px-3 py-2 text-sm">
           {!sel ? (
             <span className="text-texto-2">Tocá un músculo para ver el detalle.</span>
