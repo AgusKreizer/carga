@@ -4,7 +4,7 @@ import { useMapaEjercicios } from '../hooks'
 import type { Dia, DiaEjercicio } from '../../domain/types'
 import { Hoja, Stepper } from '../componentes/basicos'
 import { Catalogo } from './Catalogo'
-import { estimarMinutos } from '../hoy/Hoy'
+import { estimarMinutos } from '../../lib/estimar'
 
 export function EditorDia({ dia, lineas, onVolver }: { dia: Dia; lineas: DiaEjercicio[]; onVolver: () => void }) {
   const ejercicios = useMapaEjercicios()

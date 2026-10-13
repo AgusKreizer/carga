@@ -8,6 +8,8 @@ import { Onboarding } from './ui/onboarding/Onboarding'
 import { LimiteError } from './ui/componentes/LimiteError'
 import { Hoja } from './ui/componentes/basicos'
 import { importarRutina, leerRutinaDelHash, type RutinaCompartida } from './data/compartir'
+import { alIniciar } from './data/sincronizacion'
+import { restaurarTodo, type Respaldo } from './data/exportar'
 
 type Tab = 'hoy' | 'plan' | 'progreso' | 'ajustes'
 
@@ -30,6 +32,10 @@ export default function App() {
   const terminadas = useSesionesTerminadas(1)
   const [onboardingCerrado, setOnboardingCerrado] = useState(false)
   const mostrarOnboarding = !!ajustes && !ajustes.onboardingHecho && terminadas.length === 0 && !onboardingCerrado && !rutinaEntrante
+  const [respaldoNube, setRespaldoNube] = useState<Respaldo | null>(null)
+  useEffect(() => {
+    alIniciar().then((r) => { if (r.ofrecer) setRespaldoNube(r.ofrecer) })
+  }, [])
   useEffect(() => {
     if (!location.hash.includes('rutina=')) return
     leerRutinaDelHash(location.hash).then((r) => {
@@ -69,7 +75,17 @@ export default function App() {
         </LimiteError>
       </main>
 
-      <Onboarding abierto={mostrarOnboarding} onCerrar={() => setOnboardingCerrado(true)} permitirSaltar />
+      <Hoja abierta={!!respaldoNube} onCerrar={() => setRespaldoNube(null)} titulo="Hay un respaldo en la nube">
+        {respaldoNube && (
+          <div className="space-y-3">
+            <p className="text-sm text-texto-2">Este dispositivo está vacío y tu cuenta tiene un respaldo del {respaldoNube.fecha.slice(0, 10)} con {(respaldoNube.tablas.sesiones as unknown[]).length} sesiones. ¿Lo traemos acá?</p>
+            <button type="button" className="btn-grande" onClick={async () => { await restaurarTodo(respaldoNube); location.reload() }}>Restaurar</button>
+            <button type="button" className="btn-secundario w-full" onClick={() => setRespaldoNube(null)}>Empezar de cero</button>
+          </div>
+        )}
+      </Hoja>
+
+      <Onboarding abierto={mostrarOnboarding && !respaldoNube} onCerrar={() => setOnboardingCerrado(true)} permitirSaltar />
 
       <Hoja abierta={!!rutinaEntrante} onCerrar={() => setRutinaEntrante(null)} titulo="Te compartieron una rutina">
         {rutinaEntrante && (

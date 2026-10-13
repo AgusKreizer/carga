@@ -9,6 +9,7 @@ import { InstalarBanner } from './InstalarBanner'
 import { Hoja, Stepper, Vacio } from '../componentes/basicos'
 import { ahoraISO, fechaConDia, fechaLocal, haceCuanto } from '../../lib/fechas'
 import { kg } from '../../lib/formato'
+import { estimarMinutos } from '../../lib/estimar'
 import type { CoachEvento, Dia } from '../../domain/types'
 
 export function Hoy() {
@@ -236,8 +237,3 @@ function semanaDe(fechaInicio: string, hoy: string): number {
   return Math.floor(ms / (7 * 86_400_000)) + 1
 }
 
-export function estimarMinutos(lineas: { series: number; descanso: number }[]): number {
-  // ~40 s por serie de ejecución + descanso; 6 min de calentamiento
-  const seg = lineas.reduce((a, l) => a + l.series * (40 + l.descanso), 0)
-  return Math.round(6 + seg / 60)
-}

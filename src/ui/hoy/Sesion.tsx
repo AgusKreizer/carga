@@ -112,6 +112,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   )
 
   const terminar = async (datos: { energia: number | null; dolor: number | null; sueno: number | null }) => {
+    if (hechas === 0) { await repo.descartarSesion(sesion.id); return }
     await repo.terminarSesion(sesion.id, { ...datos, notas: '' })
     await correrCoachPostSesion(sesion.id)
     respaldarSiCorresponde().catch(() => {})
