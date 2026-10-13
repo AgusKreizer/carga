@@ -125,6 +125,14 @@ export function Ajustes() {
         <p className="text-[11px] text-texto-3">Se sube un respaldo completo al terminar cada sesión. El SQL para crear la tabla está en docs/supabase.sql.</p>
       </Seccion>
 
+      <Seccion titulo="Créditos">
+        <p className="text-[11px] text-texto-3">
+          Modelo anatómico 3D derivado de <a className="underline" href="https://github.com/Z-Anatomy/Models-of-human-anatomy" target="_blank" rel="noreferrer">Z-Anatomy</a> y de
+          "BodyParts3D – The Database Center for Life Science – CC-BY-SA 2.1 Japan", bajo licencia <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>.
+          Modificado: músculos superficiales agrupados y decimados. El derivado se distribuye con la misma licencia.
+        </p>
+      </Seccion>
+
       <div className="pb-6 text-center text-[11px] text-texto-3">Carga · datos locales en este dispositivo</div>
     </div>
   )

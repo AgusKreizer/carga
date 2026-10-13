@@ -1,0 +1,14 @@
+Modelo anatómico "cuerpo.glb"
+
+Derivado de Z-Anatomy (https://github.com/Z-Anatomy/Models-of-human-anatomy), que a su vez deriva de
+"BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan".
+
+Licencia: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Cambios realizados (Carga, 2026): selección de músculos superficiales y huesos de cabeza, manos y pies;
+unión por grupo muscular (pecho, deltoides anterior/lateral/posterior, bíceps, tríceps, antebrazo, espalda,
+abdomen, glúteos, cuádriceps, isquios, gemelos, relleno neutro, hueso); decimación a ~150 k triángulos;
+sin materiales. Script: scripts/exportar_glb.py.
+
+Este archivo derivado se distribuye bajo la misma licencia CC BY-SA 4.0.

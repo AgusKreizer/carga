@@ -14,6 +14,7 @@ decida la progresión con reglas explicables. Análisis y decisiones de diseño 
 - `src/data/` Dexie (`db.ts`), operaciones (`repo.ts`), seed, export/restore, backup Supabase, `demo.ts` (historial ficticio para probar).
 - `src/ui/` vistas: `hoy/` (sesión, resumen semanal, banner instalar), `plan/` (editor, informe de bloque, compartir), `progreso/` (tablero, calendario, ejercicios, músculos 2D/3D, cuerpo con fotos, historial), `ajustes/`, `onboarding/` (generador por reglas en `domain/generador.ts`); componentes en `componentes/`.
 - Deep links: `?tab=plan|progreso|ajustes&sub=musculos|cuerpo|...`. Rutina compartida: `#rutina=<gzip base64url>`.
+- Modelo 3D anatómico: `public/modelo/cuerpo.glb` (CC BY-SA 4.0, derivado de Z-Anatomy; licencia y atribución en `public/modelo/LICENCIA.txt` y en Ajustes → Créditos). Se regenera con `scripts/exportar_glb.py` en Blender headless. Nodos `grupo_<musculo>`, `grupo_neutro`, `grupo_hueso`.
 - Deploy: `npm run deploy` publica `dist/` en la rama `gh-pages` (https://aguskreizer.github.io/carga/). Nube: Supabase (URL y publishable key por defecto en `seed.ts`).
 
 ## Reglas del proyecto

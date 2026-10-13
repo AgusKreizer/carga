@@ -8,7 +8,7 @@ import { ahoraISO, fechaCorta, fechaLocal, haceCuanto, lunesDe, sumarDias } from
 import { LEYENDA_FATIGA, LEYENDA_VOLUMEN, Leyenda, MapaCuerpo, SIN_DATO } from './MapaCuerpo'
 import { COLOR, ESTILO_TOOLTIP } from './comun'
 
-const Cuerpo3D = lazy(() => import('./Cuerpo3D'))
+const Cuerpo3D = lazy(() => import('./Cuerpo3DMalla'))
 const CLAVE_3D = 'carga.vista3d'
 
 type Modo = 'volumen' | 'fatiga'
@@ -59,7 +59,8 @@ export function Musculos() {
   const datosBarras = semanas.map((s) => ({ label: s.label, v: sel ? s.valores[sel] ?? 0 : 0 }))
   const b = sel ? bandas[sel] : undefined
 
-  const colorVolumen = (m: MusculoId) => {
+  const colorVolumen = (m0: MusculoId) => {
+    const m = m0 === 'deltAnt' ? 'deltLat' : m0 // el deltoide anterior no tiene banda propia: sigue al lateral
     const v = valores[m] ?? 0
     if (v === 0) return SIN_DATO
     const z = zona(v, bandas[m])
