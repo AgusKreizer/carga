@@ -11,6 +11,7 @@ import { nuevoId } from '../../lib/ids'
 import { lunesDe, fechaLocal } from '../../lib/fechas'
 import { InformeBloque } from './InformeBloque'
 import { linkDeRutina } from '../../data/compartir'
+import { compartir } from '../../lib/nativo'
 import { Onboarding } from '../onboarding/Onboarding'
 
 export function Plan() {
@@ -50,8 +51,8 @@ export function Plan() {
           onClick={async () => {
             const url = await linkDeRutina(plan, ejercicios)
             try {
-              if (navigator.share) await navigator.share({ title: plan.programa.nombre, text: 'Mi rutina en Carga', url })
-              else { await navigator.clipboard.writeText(url); setAviso('Link copiado. Quien lo abra puede importar la rutina.') }
+              const ok = await compartir({ title: plan.programa.nombre, text: 'Mi rutina en Carga', url })
+              if (!ok) { await navigator.clipboard.writeText(url); setAviso('Link copiado. Quien lo abra puede importar la rutina.') }
             } catch { /* cancelado */ }
             setTimeout(() => setAviso(null), 4000)
           }}

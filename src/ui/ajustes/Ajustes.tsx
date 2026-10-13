@@ -8,6 +8,7 @@ import { Stepper } from '../componentes/basicos'
 import { fechaLocal, haceCuanto } from '../../lib/fechas'
 import { pedirPermisoNotificaciones, permisoNotificaciones } from '../../lib/notificaciones'
 import { generarICS } from '../../lib/calendario-ics'
+import { esNativa, programarRecordatorios } from '../../lib/nativo'
 
 export function Ajustes() {
   const a = useAjustes()
@@ -144,11 +145,14 @@ function Recordatorios({ minutos, onAviso }: { minutos: number; onAviso: (t: str
   const nombres = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
   return (
     <div className="space-y-3">
-      <div className="text-sm text-texto-2">La web no puede avisarte a futuro sin un servidor. El atajo: un evento semanal en tu calendario, con alarma una hora antes.</div>
+      <div className="text-sm text-texto-2">{esNativa() ? 'Aviso en el celular los días que elijas, a la hora que elijas.' : 'La web no puede avisarte a futuro sin un servidor. El atajo: un evento semanal en tu calendario, con alarma una hora antes.'}</div>
       <div className="flex gap-1.5">{nombres.map((n, i) => <button key={i} type="button" className={`chip flex-1 ${dias.includes(i) ? 'chip-activo' : ''}`} onClick={() => setDias(dias.includes(i) ? dias.filter((d) => d !== i) : [...dias, i].sort())}>{n}</button>)}</div>
       <div className="flex items-center justify-between gap-3">
         <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="h-12 flex-1 rounded-xl bg-superficie-2 px-3 text-base outline-none" />
-        <button type="button" className="btn-secundario shrink-0" disabled={!dias.length} onClick={() => { descargarTexto(`carga-entrenar.ics`, generarICS(dias, hora, minutos), 'text/calendar'); onAviso('Abrí el archivo .ics y agregalo a tu calendario.') }}>Agregar al calendario</button>
+        <button type="button" className="btn-secundario shrink-0" disabled={!dias.length} onClick={async () => {
+          if (esNativa()) { const ok = await programarRecordatorios(dias, hora); onAviso(ok ? 'Recordatorios programados.' : 'Sin permiso de notificaciones.'); return }
+          descargarTexto(`carga-entrenar.ics`, generarICS(dias, hora, minutos), 'text/calendar'); onAviso('Abrí el archivo .ics y agregalo a tu calendario.')
+        }}>{esNativa() ? 'Programar avisos' : 'Agregar al calendario'}</button>
       </div>
     </div>
   )

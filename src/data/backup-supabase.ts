@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import * as repo from './repo'
 import { exportarTodo, restaurarTodo, validarRespaldo, type Respaldo } from './exportar'
 import { ahoraISO } from '../lib/fechas'
+import { esNativa, REDIRECT_NATIVO, tokensDeUrl } from '../lib/nativo'
 
 let cliente: SupabaseClient | null = null
 let clienteUrl = ''
@@ -28,13 +29,22 @@ export async function usuarioActual(): Promise<{ id: string; email: string | nul
 export async function enviarMagicLink(email: string): Promise<void> {
   const sb = await clienteSupabase()
   if (!sb) throw new Error('Supabase no está configurado.')
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: esNativa() ? REDIRECT_NATIVO : window.location.origin } })
   if (error) throw error
 }
 
 export async function cerrarSesionNube(): Promise<void> {
   const sb = await clienteSupabase()
   await sb?.auth.signOut()
+}
+
+/** En la app nativa, el magic link vuelve por deep link: se toma la sesión de la URL. */
+export async function sesionDesdeUrl(url: string): Promise<boolean> {
+  const t = tokensDeUrl(url)
+  const sb = await clienteSupabase()
+  if (!t || !sb) return false
+  const { error } = await sb.auth.setSession(t)
+  return !error
 }
 
 /** Sube el respaldo completo (una fila por usuario, last-write-wins). */

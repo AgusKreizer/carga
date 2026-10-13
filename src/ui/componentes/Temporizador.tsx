@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { duracion } from '../../lib/fechas'
 import { notificarDescansoListo } from '../../lib/notificaciones'
+import { cancelarFinDescanso, esNativa, programarFinDescanso, vibrar } from '../../lib/nativo'
 
 /**
  * Timer de descanso basado en hora de fin (sobrevive a pantalla apagada).
@@ -14,12 +15,13 @@ export function Temporizador({ fin, detalle, onSaltar, onSumar }: { fin: number 
     return () => window.clearInterval(id)
   }, [fin])
   useEffect(() => {
-    if (!fin) return
+    if (!fin) { cancelarFinDescanso(); return }
     const restante = fin - Date.now()
     if (restante <= 0) return
+    if (esNativa()) programarFinDescanso(fin, detalle ?? 'Siguiente serie')
     const id = window.setTimeout(() => {
-      try { navigator.vibrate?.([200, 100, 200]) } catch { /* sin vibración */ }
-      if (document.visibilityState !== 'visible') notificarDescansoListo(detalle ?? 'Siguiente serie')
+      vibrar()
+      if (!esNativa() && document.visibilityState !== 'visible') notificarDescansoListo(detalle ?? 'Siguiente serie')
     }, restante)
     return () => window.clearTimeout(id)
   }, [fin, detalle])

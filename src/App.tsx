@@ -9,6 +9,8 @@ import { LimiteError } from './ui/componentes/LimiteError'
 import { Hoja } from './ui/componentes/basicos'
 import { importarRutina, leerRutinaDelHash, type RutinaCompartida } from './data/compartir'
 import { alIniciar } from './data/sincronizacion'
+import { esNativa } from './lib/nativo'
+import { sesionDesdeUrl } from './data/backup-supabase'
 import { restaurarTodo, type Respaldo } from './data/exportar'
 
 type Tab = 'hoy' | 'plan' | 'progreso' | 'ajustes'
@@ -35,6 +37,15 @@ export default function App() {
   const [respaldoNube, setRespaldoNube] = useState<Respaldo | null>(null)
   useEffect(() => {
     alIniciar().then((r) => { if (r.ofrecer) setRespaldoNube(r.ofrecer) })
+    if (!esNativa()) return
+    let quitar: (() => void) | null = null
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('appUrlOpen', async ({ url }) => {
+        if (url.startsWith('ar.carga.app://auth')) { if (await sesionDesdeUrl(url)) { setTab('ajustes'); alIniciar().then((r) => { if (r.ofrecer) setRespaldoNube(r.ofrecer) }) } }
+        else if (url.includes('#rutina=')) leerRutinaDelHash(url.slice(url.indexOf('#'))).then((r) => r && setRutinaEntrante(r))
+      }).then((h) => { quitar = () => h.remove() })
+    })
+    return () => { quitar?.() }
   }, [])
   useEffect(() => {
     if (!location.hash.includes('rutina=')) return
