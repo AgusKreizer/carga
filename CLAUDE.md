@@ -12,7 +12,9 @@ decida la progresión con reglas explicables. Análisis y decisiones de diseño 
 ## Estructura
 - `src/domain/` tipos, catálogo de ejercicios, plan de Agus y **motor de coach** (`coach/`): puro, sin IO, con tests.
 - `src/data/` Dexie (`db.ts`), operaciones (`repo.ts`), seed, export/restore, backup Supabase, `demo.ts` (historial ficticio para probar).
-- `src/ui/` vistas: `hoy/` (sesión), `plan/` (editor), `progreso/`, `ajustes/`; componentes en `componentes/`.
+- `src/ui/` vistas: `hoy/` (sesión, resumen semanal, banner instalar), `plan/` (editor, informe de bloque, compartir), `progreso/` (tablero, calendario, ejercicios, músculos 2D/3D, cuerpo con fotos, historial), `ajustes/`, `onboarding/` (generador por reglas en `domain/generador.ts`); componentes en `componentes/`.
+- Deep links: `?tab=plan|progreso|ajustes&sub=musculos|cuerpo|...`. Rutina compartida: `#rutina=<gzip base64url>`.
+- Deploy: `npm run deploy` publica `dist/` en la rama `gh-pages` (https://aguskreizer.github.io/carga/). Nube: Supabase (URL y publishable key por defecto en `seed.ts`).
 
 ## Reglas del proyecto
 1. **Nada se borra**: todo registro tiene `activo` y se desactiva con flag.
