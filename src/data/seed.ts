@@ -15,8 +15,8 @@ export const AJUSTES_DEFAULT: Ajustes = {
   objetivoPeso: 'estable',
   minutosSesion: 60,
   onboardingHecho: false,
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://znqqhqirivfzabbjexxj.supabase.co',
+  supabaseAnonKey: 'sb_publishable_0G5Tjw4eWR48MVFSOs_Rzw_2Utj6271',
   ultimoBackup: null,
 }
 
@@ -39,8 +39,12 @@ export async function sembrar(): Promise<void> {
       await db.dias.bulkAdd(plan.dias)
       await db.diaEjercicios.bulkAdd(plan.diaEjercicios)
     }
-    if (!(await db.ajustes.get('global'))) {
+    const ajustes = await db.ajustes.get('global')
+    if (!ajustes) {
       await db.ajustes.add(AJUSTES_DEFAULT)
+    } else if (!ajustes.supabaseUrl || !ajustes.supabaseAnonKey) {
+      // instalaciones previas sin nube configurada: toman la del proyecto de Agus
+      await db.ajustes.update('global', { supabaseUrl: AJUSTES_DEFAULT.supabaseUrl, supabaseAnonKey: AJUSTES_DEFAULT.supabaseAnonKey })
     }
   })
 }
