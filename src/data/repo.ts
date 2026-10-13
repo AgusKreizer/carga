@@ -88,14 +88,19 @@ export async function diasDesdeUltima(ejercicioId: string, excluirSesionId?: str
   return diasEntre(previas[0].fechaInicio.slice(0, 10), fechaLocal())
 }
 
-/** Próximo día del plan: el siguiente (no opcional) al de la última sesión terminada. */
+/**
+ * Próximo día del plan: el que hace más tiempo no se hace (los nunca hechos primero, en orden).
+ * Así, si un día se hizo fuera de orden, la rotación se acomoda sola.
+ */
 export async function proximoDia(plan: PlanActivo): Promise<Dia | null> {
   const obligatorios = plan.dias.filter((d) => !d.opcional)
   if (!obligatorios.length) return plan.dias[0] ?? null
-  const ultima = (await sesionesTerminadas(20)).find((s) => s.bloqueId === plan.bloque.id && obligatorios.some((d) => d.id === s.diaId))
-  if (!ultima) return obligatorios[0]
-  const idx = obligatorios.findIndex((d) => d.id === ultima.diaId)
-  return obligatorios[(idx + 1) % obligatorios.length]
+  const recientes = await sesionesTerminadas(60)
+  const ultimaFecha = new Map<string, string>()
+  for (const s of recientes) if (s.bloqueId === plan.bloque.id && !ultimaFecha.has(s.diaId)) ultimaFecha.set(s.diaId, s.fechaInicio)
+  const nuncaHecho = obligatorios.find((d) => !ultimaFecha.has(d.id))
+  if (nuncaHecho) return nuncaHecho
+  return [...obligatorios].sort((a, b) => ultimaFecha.get(a.id)!.localeCompare(ultimaFecha.get(b.id)!))[0]
 }
 
 // ---------- Sesión ----------

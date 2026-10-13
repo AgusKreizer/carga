@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as repo from '../../data/repo'
-import { useAjustes, useEventosPendientes, useMapaEjercicios, usePlan, usePesos, useSesionActiva, useSesionesTerminadas } from '../hooks'
+import { useAjustes, useEventosPendientes, useMapaEjercicios, usePlan, usePesos, useSesionActiva, useSesionesTerminadas, useTodasLasSeries } from '../hooks'
+import { calcularFatiga } from '../../domain/coach/fatiga'
+import { consejoDeHoy } from '../../domain/coach/diaInteligente'
 import { Sesion } from './Sesion'
 import { Hoja, Stepper, Vacio } from '../componentes/basicos'
-import { fechaConDia, fechaLocal, haceCuanto } from '../../lib/fechas'
+import { ahoraISO, fechaConDia, fechaLocal, haceCuanto } from '../../lib/fechas'
 import { kg } from '../../lib/formato'
 import type { CoachEvento, Dia } from '../../domain/types'
 
@@ -21,6 +23,8 @@ function Inicio() {
   const eventos = useEventosPendientes()
   const terminadas = useSesionesTerminadas(5)
   const pesos = usePesos()
+  const todasSeries = useTodasLasSeries()
+  const sesionesRecientes = useSesionesTerminadas(40)
   const [proximo, setProximo] = useState<Dia | null>(null)
   const [elegirDia, setElegirDia] = useState(false)
   const [pesoAbierto, setPesoAbierto] = useState(false)
@@ -29,6 +33,12 @@ function Inicio() {
   useEffect(() => {
     if (plan) repo.proximoDia(plan).then(setProximo)
   }, [plan, terminadas.length])
+
+  const consejo = useMemo(() => {
+    if (!plan || !proximo || ejercicios.size === 0) return null
+    const fatiga = calcularFatiga(todasSeries, new Map(sesionesRecientes.map((s) => [s.id, s])), ejercicios, ahoraISO(), ajustes?.factorIndirecto ?? 0.5)
+    return consejoDeHoy(proximo, plan.dias, plan.lineas, ejercicios, fatiga, ajustes?.factorIndirecto ?? 0.5)
+  }, [plan, proximo, ejercicios, todasSeries, sesionesRecientes, ajustes?.factorIndirecto])
 
   if (plan === undefined) return null
   if (plan === null) return <Vacio titulo="No hay un plan activo" detalle="Creá uno en la pestaña Plan." />
@@ -77,9 +87,21 @@ function Inicio() {
               </li>
             ))}
           </ul>
+          {consejo && (
+            <div className={`mt-3 rounded-xl px-3 py-2 text-sm ${consejo.tono === 'aviso' ? 'bg-aviso/10 text-texto' : 'bg-superficie-2 text-texto-2'}`}>
+              <div className="mb-0.5 text-[11px] font-medium uppercase tracking-wider text-texto-3">Coach</div>
+              {consejo.lectura}
+              {consejo.alternativa && <div className="mt-1 text-texto-2">{consejo.alternativa.motivo}</div>}
+            </div>
+          )}
           <button type="button" className="btn-grande mt-4" disabled={arrancando} onClick={() => arrancar(proximo)}>
             Empezar {proximo.nombre}
           </button>
+          {consejo?.alternativa && (
+            <button type="button" className="btn-secundario mt-2 w-full" disabled={arrancando} onClick={() => arrancar(consejo.alternativa!.dia)}>
+              Mejor hoy: {consejo.alternativa.dia.nombre}
+            </button>
+          )}
           <button type="button" className="mt-2 w-full py-2 text-center text-sm text-texto-2" onClick={() => setElegirDia(true)}>
             Hacer otro día
           </button>
