@@ -15,6 +15,9 @@ export interface ContextoProgresion {
   esDeload: boolean
   /** días desde la última sesión con este ejercicio (null si nunca) */
   diasDesdeUltima: number | null
+  /** autocalibración: multiplicador del incremento al subir (1 normal, 2 si el objetivo venía conservador) */
+  salto?: 1 | 2
+  motivoSalto?: string | null
 }
 
 const DIAS_PAUSA_LARGA = 10
@@ -26,7 +29,7 @@ const FACTOR_PAUSA = 0.92
  * (RIR real ≥ RIR objetivo). Si falta el RIR en alguna serie, no se sube solo: se pide el dato.
  */
 export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
-  const { linea, ejercicio, previas, esDeload, diasDesdeUltima } = ctx
+  const { linea, ejercicio, previas, esDeload, diasDesdeUltima, salto = 1, motivoSalto } = ctx
   const base = { diaEjercicioId: linea.id, ejercicioId: ejercicio.id, rir: linea.rir, subeCarga: false }
   const ultima = previas[0]
 
@@ -66,12 +69,15 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
   const algunaBajoMinimo = trabajo.some((s) => s.reps < linea.repsMin && s.rir != null && s.rir <= linea.rir)
 
   if (todasAlTope && !faltaRir && sinPasarse) {
-    const carga = redondearA(cargaBase + inc, inc)
+    const incReal = inc * salto
+    const carga = redondearA(cargaBase + incReal, inc)
     return {
       ...base,
       subeCarga: true,
       series: repetir(linea.series, { carga, reps: linea.repsMin }),
-      porQue: `Llegaste a ${linea.repsMax} en las ${linea.series} series con RIR ${linea.rir} o más: +${formatInc(inc)} kg y volvés a ${linea.repsMin}.`,
+      porQue: salto > 1
+        ? `Llegaste a ${linea.repsMax} en todas y ${motivoSalto ?? 'el objetivo venía conservador'}: salto doble, +${formatInc(incReal)} kg y volvés a ${linea.repsMin}.`
+        : `Llegaste a ${linea.repsMax} en las ${linea.series} series con RIR ${linea.rir} o más: +${formatInc(inc)} kg y volvés a ${linea.repsMin}.`,
     }
   }
 

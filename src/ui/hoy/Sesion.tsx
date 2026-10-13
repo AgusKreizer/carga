@@ -3,6 +3,7 @@ import * as repo from '../../data/repo'
 import { correrCoachPostSesion } from '../../data/coach-runner'
 import { respaldarSiCorresponde } from '../../data/backup-supabase'
 import { objetivoParaHoy, type SesionPrevia } from '../../domain/coach/progresion'
+import { calibracion } from '../../domain/coach/calibracion'
 import type { DiaEjercicioSnapshot, Ejercicio, ObjetivoEjercicio, SerieLog, Sesion as TSesion } from '../../domain/types'
 import { useMapaEjercicios, useSeriesDeSesion } from '../hooks'
 import { TarjetaEjercicio } from './TarjetaEjercicio'
@@ -46,7 +47,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         const previas = await repo.previasDeEjercicio(l.ejercicioId, 8, sesion.id)
         const dias = await repo.diasDesdeUltima(l.ejercicioId, sesion.id)
         nuevo[l.id] = {
-          objetivo: objetivoParaHoy({ linea: l, ejercicio: ej, previas, esDeload: sesion.esDeload, diasDesdeUltima: dias }),
+          objetivo: (() => { const c = calibracion(previas); return objetivoParaHoy({ linea: l, ejercicio: ej, previas, esDeload: sesion.esDeload, diasDesdeUltima: dias, salto: c.salto, motivoSalto: c.motivo }) })(),
           ultima: previas[0],
         }
       }

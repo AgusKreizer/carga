@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { objetivoParaHoy } from './progresion'
 import { detectarEstancamiento } from './estancamiento'
+import { calibracion } from './calibracion'
 import type { DiaEjercicio, Ejercicio, SerieLog } from '../types'
 
 const ejercicio: Ejercicio = {
@@ -71,6 +72,24 @@ describe('objetivoParaHoy', () => {
     const previas = [sesion('2026-09-01', serie(80, 10, 1, 1), serie(80, 10, 1, 2), serie(80, 10, 1, 3))]
     const o = objetivoParaHoy({ linea, ejercicio, previas, esDeload: false, diasDesdeUltima: 15 })
     expect(o.series[0].carga).toBe(72.5)
+  })
+})
+
+describe('autocalibración', () => {
+  it('con salto 2 sube el doble del incremento', () => {
+    const previas = [sesion('2026-10-01', serie(80, 12, 1, 1), serie(80, 12, 2, 2), serie(80, 12, 1, 3))]
+    const o = objetivoParaHoy({ linea, ejercicio, previas, esDeload: false, diasDesdeUltima: 3, salto: 2, motivoSalto: 'venís sobrando reps' })
+    expect(o.series[0].carga).toBe(85)
+    expect(o.porQue).toMatch(/doble/)
+  })
+  it('calibracion detecta reps de más con RIR cumplido', () => {
+    const conObjetivo = (reps: number, orden: number) => ({ ...serie(80, reps, 1, orden), objetivoReps: 10, rirObjetivo: 1 })
+    const previas = [sesion('2026-10-01', conObjetivo(12, 1), conObjetivo(12, 2), conObjetivo(12, 3)), sesion('2026-09-28', conObjetivo(12, 1), conObjetivo(12, 2), conObjetivo(11, 3))]
+    const c = calibracion(previas)
+    expect(c.salto).toBe(2)
+  })
+  it('sin series suficientes salto 1', () => {
+    expect(calibracion([]).salto).toBe(1)
   })
 })
 
