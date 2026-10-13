@@ -1,5 +1,4 @@
-import { MUSCULOS, type Banda, type MusculoId } from '../../domain/types'
-import { zona } from '../../domain/coach/volumen'
+import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { COLOR } from './comun'
 
 /**
@@ -7,32 +6,26 @@ import { COLOR } from './comun'
  * Deliberadamente esquemático: la app sabe series por grupo, no por fibra.
  */
 interface Props {
-  valores: Partial<Record<MusculoId, number>>
-  bandas: Partial<Record<MusculoId, Banda>>
+  colorDe: (m: MusculoId) => string
   seleccionado: MusculoId | null
   onTocar: (m: MusculoId) => void
 }
 
 const SILUETA = '#1c1c21'
 const BORDE = '#26262c'
+export const SIN_DATO = '#2a2a31'
 
-export function MapaCuerpo({ valores, bandas, seleccionado, onTocar }: Props) {
-  const color = (m: MusculoId) => {
-    const v = valores[m] ?? 0
-    if (v === 0) return '#2a2a31'
-    const z = zona(v, bandas[m])
-    return z === 'bajo' ? COLOR.aviso : z === 'alto' ? COLOR.alerta : z === 'productivo' ? COLOR.ok : COLOR.pierna
-  }
+export function MapaCuerpo({ colorDe, seleccionado, onTocar }: Props) {
   const g = (m: MusculoId, children: React.ReactNode) => (
     <g
       key={m}
       role="button"
       aria-label={MUSCULOS[m]}
       onClick={() => onTocar(m)}
-      fill={color(m)}
+      fill={colorDe(m)}
       stroke={seleccionado === m ? '#f4f4f5' : BORDE}
       strokeWidth={seleccionado === m ? 2 : 1}
-      style={{ cursor: 'pointer', opacity: seleccionado && seleccionado !== m ? 0.55 : 1 }}
+      style={{ cursor: 'pointer', opacity: seleccionado && seleccionado !== m ? 0.55 : 1, transition: 'fill .2s' }}
     >
       {children}
     </g>
@@ -80,11 +73,13 @@ function Silueta() {
   )
 }
 
-export function Leyenda() {
-  const items: [string, string][] = [['Sin series', '#2a2a31'], ['Bajo mínimo', COLOR.aviso], ['Productivo', COLOR.ok], ['Por encima', COLOR.alerta], ['Sin banda', COLOR.pierna]]
+export function Leyenda({ items }: { items: [string, string][] }) {
   return (
     <div className="flex flex-wrap gap-3 text-[11px] text-texto-3">
       {items.map(([t, c]) => <span key={t} className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm" style={{ background: c }} />{t}</span>)}
     </div>
   )
 }
+
+export const LEYENDA_VOLUMEN: [string, string][] = [['Sin series', SIN_DATO], ['Bajo mínimo', COLOR.aviso], ['Productivo', COLOR.ok], ['Por encima', COLOR.alerta], ['Sin banda', COLOR.pierna]]
+export const LEYENDA_FATIGA: [string, string][] = [['Fresco', COLOR.ok], ['Cargado', COLOR.aviso], ['Muy cargado', COLOR.alerta], ['Sin datos', SIN_DATO]]

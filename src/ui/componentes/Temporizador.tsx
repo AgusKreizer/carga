@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { duracion } from '../../lib/fechas'
+import { notificarDescansoListo } from '../../lib/notificaciones'
 
 /**
  * Timer de descanso basado en hora de fin (sobrevive a pantalla apagada).
- * Vibra al terminar si el dispositivo lo permite.
+ * Al terminar vibra y, si la app no está visible y hay permiso, manda una notificación.
  */
-export function Temporizador({ fin, onSaltar, onSumar }: { fin: number | null; onSaltar: () => void; onSumar: (seg: number) => void }) {
+export function Temporizador({ fin, detalle, onSaltar, onSumar }: { fin: number | null; detalle?: string; onSaltar: () => void; onSumar: (seg: number) => void }) {
   const [ahora, setAhora] = useState(Date.now())
   useEffect(() => {
     if (!fin) return
@@ -18,9 +19,10 @@ export function Temporizador({ fin, onSaltar, onSumar }: { fin: number | null; o
     if (restante <= 0) return
     const id = window.setTimeout(() => {
       try { navigator.vibrate?.([200, 100, 200]) } catch { /* sin vibración */ }
+      if (document.visibilityState !== 'visible') notificarDescansoListo(detalle ?? 'Siguiente serie')
     }, restante)
     return () => window.clearTimeout(id)
-  }, [fin])
+  }, [fin, detalle])
 
   if (!fin) return null
   const restante = Math.max(0, Math.round((fin - ahora) / 1000))

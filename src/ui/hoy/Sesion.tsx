@@ -175,7 +175,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         </button>
       </div>
 
-      <Temporizador fin={finTimer} onSaltar={() => setFinTimer(null)} onSumar={(s) => setFinTimer((f) => (f ?? Date.now()) + s * 1000)} />
+      <Temporizador fin={finTimer} detalle={activa ? sesion.snapshot.find((x) => x.id === activa)?.ejercicioNombre : undefined} onSaltar={() => setFinTimer(null)} onSumar={(s) => setFinTimer((f) => (f ?? Date.now()) + s * 1000)} />
 
       <Hoja abierta={!!sustituyendo} onCerrar={() => setSustituyendo(null)} titulo={`Sustituir ${sustituyendo?.ejercicioNombre ?? ''}`}>
         <p className="mb-3 text-sm text-texto-2">Mismo patrón. La sustitución queda registrada como tal; el plan no cambia.</p>

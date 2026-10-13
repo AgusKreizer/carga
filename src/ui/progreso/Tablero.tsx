@@ -6,6 +6,7 @@ import { detectarEstancamiento } from '../../domain/coach/estancamiento'
 import { haceCuanto } from '../../lib/fechas'
 import { kg } from '../../lib/formato'
 import { Vacio } from '../componentes/basicos'
+import { Precision } from './Precision'
 
 type Flecha = '↑' | '↗' | '→' | '↓'
 type Estado = 'progresando' | 'estancado' | 'nuevo' | 'bajando' | 'estable'
@@ -117,6 +118,7 @@ export function Tablero({ onVerEjercicio }: { onVerEjercicio: (id: string) => vo
           ))}
         </ul>
       </div>
+      <Precision />
     </div>
   )
 }

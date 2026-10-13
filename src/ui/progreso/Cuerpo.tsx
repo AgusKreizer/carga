@@ -7,6 +7,7 @@ import { Hoja } from '../componentes/basicos'
 import { PesoHoja } from '../hoy/Hoy'
 import * as repo from '../../data/repo'
 import { COLOR, Dato, ESTILO_TOOLTIP } from './comun'
+import { FuerzaVsPeso } from './FuerzaVsPeso'
 
 export function Cuerpo() {
   const pesos = usePesos()
@@ -57,6 +58,7 @@ export function Cuerpo() {
           </div>
         )}
       </div>
+      <FuerzaVsPeso />
       <div className="tarjeta">
         <div className="mb-2 flex items-baseline justify-between">
           <div className="text-[11px] font-medium uppercase tracking-wider text-texto-3">Perímetros (cada 4 semanas)</div>

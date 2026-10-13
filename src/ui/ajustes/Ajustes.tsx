@@ -6,6 +6,7 @@ import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
 import { fechaLocal, haceCuanto } from '../../lib/fechas'
+import { pedirPermisoNotificaciones, permisoNotificaciones } from '../../lib/notificaciones'
 
 export function Ajustes() {
   const a = useAjustes()
@@ -62,6 +63,10 @@ export function Ajustes() {
         <p className="text-[11px] text-texto-3">Las bandas por músculo son referencias para intermedios, no verdades: la respuesta al volumen es individual.</p>
       </Seccion>
 
+      <Seccion titulo="Descanso">
+        <NotificacionesToggle />
+      </Seccion>
+
       <Seccion titulo="Discos (calculadora)">
         <div className="flex items-center justify-between"><span className="text-sm">Barra olímpica</span><Stepper valor={a.pesoBarra} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarra: v })} sufijo="kg" /></div>
         <div className="flex items-center justify-between"><span className="text-sm">Barra del Smith</span><Stepper valor={a.pesoBarraSmith} paso={2.5} min={0} onCambio={(v) => repo.guardarAjustes({ pesoBarraSmith: v })} sufijo="kg" /></div>
@@ -115,6 +120,19 @@ export function Ajustes() {
       </Seccion>
 
       <div className="pb-6 text-center text-[11px] text-texto-3">Carga · datos locales en este dispositivo</div>
+    </div>
+  )
+}
+
+function NotificacionesToggle() {
+  const [estado, setEstado] = useState(permisoNotificaciones())
+  if (estado === 'no-soportado') return <div className="text-sm text-texto-2">Este navegador no soporta notificaciones. En el celu, instalá la app en la pantalla de inicio.</div>
+  if (estado === 'granted') return <div className="text-sm text-texto-2">Notificación al terminar el descanso: activada. Si la app queda en segundo plano, te avisa igual.</div>
+  if (estado === 'denied') return <div className="text-sm text-texto-2">Notificaciones bloqueadas. Activalas desde los permisos del sitio en el navegador.</div>
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="text-sm text-texto-2">Avisarte cuando termina el descanso aunque la app esté en segundo plano.</div>
+      <button type="button" className="btn-secundario shrink-0" onClick={async () => setEstado(await pedirPermisoNotificaciones())}>Activar</button>
     </div>
   )
 }

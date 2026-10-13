@@ -43,7 +43,7 @@ Qué muestra el mapa (dos modos con un switch, nunca los dos a la vez):
 
 **Modo Fatiga (hoy)**: cada músculo tiene un nivel 0–100 % de "frescura". Reglas explícitas (todas editables después):
 - Cada serie de trabajo suma fatiga = factor del músculo (1 directa, 0,5 indirecta) × cercanía al fallo (RIR 0 = 1,3; RIR 1 = 1,15; RIR 2 = 1; RIR 3+ = 0,85) × tamaño del ejercicio (compuesto 1,2; aislamiento 1).
-- La fatiga decae con vida media de 36 h para músculos chicos (deltoides, bíceps, tríceps, gemelos, abdomen) y 48 h para grandes (pecho, espalda, cuádriceps, isquios, glúteos). A los 4 días casi todo está en 0.
+- La fatiga decae con vida media de 36 h para músculos chicos (deltoides, bíceps, tríceps, gemelos, abdomen) y 48 h para grandes (pecho, espalda, cuádriceps, isquios, glúteos). Con 10 series a RIR 1: ~82 % el mismo día, ~58 % a las 48 h, ~35 % a los 4 días, ~14 % a la semana.
 - Sueño "mal" y dolor reportados al cerrar la sesión frenan el decaimiento un 25 % durante 24 h.
 - Color: verde fresco, amarillo cargado, rojo cargado y entrenado hace menos de 24 h.
 - Se usa para una sola decisión: el aviso "Pierna B hoy con isquios al 40 %: es normal si vienen de Pierna A; si te duele, bajá una serie" y para el futuro "día libre inteligente" (elegir qué día del plan hacer cuando se desordena la semana).
