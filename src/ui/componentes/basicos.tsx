@@ -24,10 +24,10 @@ export function Hoja({ abierta, onCerrar, titulo, children }: { abierta: boolean
 
 /** Control numérico sin teclado: − valor + */
 export function Stepper({
-  valor, paso, min = 0, onCambio, sufijo, grande, vacio,
-}: { valor: number | null; paso: number; min?: number; onCambio: (v: number) => void; sufijo?: string; grande?: boolean; vacio?: string }) {
+  valor, paso, min = 0, onCambio, sufijo, grande, vacio, base,
+}: { valor: number | null; paso: number; min?: number; onCambio: (v: number) => void; sufijo?: string; grande?: boolean; vacio?: string; base?: number }) {
   const sostener = useRef<number | null>(null)
-  const cambiar = (d: number) => onCambio(Math.max(min, redondear((valor ?? 0) + d, paso)))
+  const cambiar = (d: number) => onCambio(Math.max(min, valor == null && base != null ? base : redondear((valor ?? 0) + d, paso)))
   const empezar = (d: number) => {
     cambiar(d)
     let n = 0

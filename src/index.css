@@ -62,3 +62,23 @@ input, textarea { user-select: text; }
 
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .aparecer { animation: aparecer .18s ease-out; }
+
+/* ---- Apertura y logo ---- */
+@keyframes disco-cae { 0% { transform: translateY(-70px); opacity: 0; } 60% { transform: translateY(3px); opacity: 1; } 80% { transform: translateY(-1.5px); } 100% { transform: translateY(0); } }
+@keyframes barra-levanta { 0%, 55% { transform: translateY(0) rotate(0); } 70% { transform: translateY(2px) rotate(-0.6deg); } 100% { transform: translateY(-14px) rotate(0); } }
+@keyframes sombra-encoge { 0%, 55% { transform: scaleX(1); opacity: .5; } 100% { transform: scaleX(.6); opacity: .25; } }
+@keyframes texto-sube { 0%, 70% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+.logo-animado .logo-disco { opacity: 0; animation: disco-cae .38s cubic-bezier(.3,1.4,.5,1) forwards; }
+.logo-animado .d3 { animation-delay: .10s } .logo-animado .d4 { animation-delay: .18s }
+.logo-animado .d2 { animation-delay: .30s } .logo-animado .d5 { animation-delay: .38s }
+.logo-animado .d1 { animation-delay: .50s } .logo-animado .d6 { animation-delay: .58s }
+.logo-animado .logo-barra { transform-origin: 60px 60px; animation: barra-levanta 1.7s cubic-bezier(.2,.9,.3,1) forwards; }
+.logo-animado .logo-sombra { transform-origin: 60px 104px; animation: sombra-encoge 1.7s ease forwards; }
+.intro-nombre, .intro-lema { animation: texto-sube 1.9s ease forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .logo-animado .logo-disco, .logo-animado .logo-barra, .logo-animado .logo-sombra, .intro-nombre, .intro-lema { animation: none; opacity: 1; }
+}
+/* profundidad: la escena gira en 3D mientras caen los discos y se asienta de frente */
+@keyframes escena-3d { 0% { transform: perspective(600px) rotateY(-55deg) rotateX(18deg) scale(.82); } 65% { transform: perspective(600px) rotateY(8deg) rotateX(4deg) scale(1.02); } 100% { transform: perspective(600px) rotateY(0) rotateX(0) scale(1); } }
+.intro-escena { animation: escena-3d 1.6s cubic-bezier(.2,.8,.2,1) both; transform-style: preserve-3d; filter: drop-shadow(0 18px 24px rgba(255,176,32,.18)); }
+@media (prefers-reduced-motion: reduce) { .intro-escena { animation: none; } }

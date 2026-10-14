@@ -10,6 +10,8 @@ import { Hoja } from './ui/componentes/basicos'
 import { importarRutina, leerRutinaDelHash, type RutinaCompartida } from './data/compartir'
 import { alIniciar } from './data/sincronizacion'
 import { esNativa } from './lib/nativo'
+import { Intro } from './ui/Intro'
+import { Logo } from './ui/componentes/Logo'
 import { sesionDesdeUrl } from './data/backup-supabase'
 import { restaurarTodo, type Respaldo } from './data/exportar'
 
@@ -30,6 +32,8 @@ export default function App() {
   const sesion = useSesionActiva()
   const enSesion = !!sesion && tab === 'hoy'
   const [rutinaEntrante, setRutinaEntrante] = useState<RutinaCompartida | null>(null)
+  const [intro, setIntro] = useState(() => !sessionStorage.getItem('carga.intro'))
+  const cerrarIntro = () => { setIntro(false); try { sessionStorage.setItem('carga.intro', '1') } catch { /* sin storage */ } }
   const ajustes = useAjustes()
   const terminadas = useSesionesTerminadas(1)
   const [onboardingCerrado, setOnboardingCerrado] = useState(false)
@@ -57,9 +61,11 @@ export default function App() {
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col">
+      {intro && <Intro onFin={cerrarIntro} />}
       {!enSesion && (
         <header className="pt-safe flex items-center justify-between px-4 pb-2 pt-3">
-          <div className="text-xl font-bold tracking-tight">
+          <div className="flex items-center gap-2 text-xl font-bold tracking-tight">
+            {tab !== 'ajustes' && <Logo tamano={26} />}
             {tab === 'ajustes' ? 'Ajustes' : 'Carga'}
           </div>
           <button

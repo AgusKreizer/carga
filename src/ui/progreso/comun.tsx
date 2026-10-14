@@ -91,7 +91,7 @@ export function DetalleSesionHoja({ sesion, series, onCerrar }: { sesion: Sesion
           </div>
           {(sesion.energia || sesion.dolor != null || sesion.sueno) && (
             <div className="mt-3 text-xs text-texto-3">
-              {sesion.energia ? `Energía ${['', 'baja', 'normal', 'alta'][sesion.energia]} · ` : ''}{sesion.dolor != null ? `Dolor ${['no', 'leve', 'moderado', 'fuerte'][sesion.dolor]} · ` : ''}{sesion.sueno ? `Sueño ${['', 'mal', 'normal', 'bien'][sesion.sueno]}` : ''}
+              {sesion.energia ? `Sesión ${sesion.energia}/5 · ` : ''}{sesion.dolor != null ? `Dolor ${['no', 'leve', 'moderado', 'fuerte'][sesion.dolor]} · ` : ''}{sesion.horasSueno != null ? `Sueño ${sesion.horasSueno} h` : sesion.sueno ? `Sueño ${['', 'mal', 'normal', 'bien'][sesion.sueno]}` : ''}
             </div>
           )}
         </>

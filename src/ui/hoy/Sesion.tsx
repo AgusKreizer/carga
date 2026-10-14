@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { correrCoachPostSesion } from '../../data/coach-runner'
 import { respaldarSiCorresponde } from '../../data/backup-supabase'
@@ -8,8 +8,11 @@ import type { DiaEjercicioSnapshot, Ejercicio, ObjetivoEjercicio, SerieLog, Sesi
 import { useMapaEjercicios, useSeriesDeSesion } from '../hooks'
 import { TarjetaEjercicio } from './TarjetaEjercicio'
 import { Temporizador } from '../componentes/Temporizador'
-import { Escala, Hoja } from '../componentes/basicos'
+import { Escala, Hoja, Stepper } from '../componentes/basicos'
 import { duracion } from '../../lib/fechas'
+import { kg } from '../../lib/formato'
+import { alAccionarNotificacion, mostrarNotifSesion, ocultarNotifSesion } from '../../lib/sesion-nativa'
+import { esNativa } from '../../lib/nativo'
 
 interface InfoLinea {
   objetivo: ObjetivoEjercicio
@@ -26,13 +29,46 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   const [guardando, setGuardando] = useState(false)
   const [sustituyendo, setSustituyendo] = useState<DiaEjercicioSnapshot | null>(null)
   const [transcurrido, setTranscurrido] = useState(0)
+  const [modoOrden, setModoOrden] = useState(false)
 
+  // Cronómetro de sesión con pausa (persistida en la sesión)
+  const pausada = !!sesion.pausadoDesde
   useEffect(() => {
-    const t = () => setTranscurrido(Math.floor((Date.now() - new Date(sesion.fechaInicio).getTime()) / 1000))
+    const t = () => {
+      const inicio = new Date(sesion.fechaInicio).getTime()
+      const pausados = (sesion.segundosPausados ?? 0) * 1000 + (sesion.pausadoDesde ? Date.now() - new Date(sesion.pausadoDesde).getTime() : 0)
+      setTranscurrido(Math.max(0, Math.floor((Date.now() - inicio - pausados) / 1000)))
+    }
     t()
     const id = window.setInterval(t, 1000)
     return () => window.clearInterval(id)
-  }, [sesion.fechaInicio])
+  }, [sesion.fechaInicio, sesion.pausadoDesde, sesion.segundosPausados])
+
+  const pausar = () => repo.actualizarSesion(sesion.id, { pausadoDesde: new Date().toISOString() })
+  const reanudar = () => {
+    const extra = sesion.pausadoDesde ? Math.round((Date.now() - new Date(sesion.pausadoDesde).getTime()) / 1000) : 0
+    return repo.actualizarSesion(sesion.id, { pausadoDesde: null, segundosPausados: (sesion.segundosPausados ?? 0) + extra })
+  }
+  const reiniciarTiempo = () => {
+    if (!confirm('¿Reiniciar el cronómetro de la sesión? Las series no se tocan.')) return
+    return repo.actualizarSesion(sesion.id, { fechaInicio: new Date().toISOString(), pausadoDesde: null, segundosPausados: 0 })
+  }
+
+  // Orden de los ejercicios solo para esta sesión
+  const lineas = useMemo(() => {
+    const orden = sesion.ordenSesion
+    if (!orden?.length) return sesion.snapshot
+    const pos = new Map(orden.map((id, i) => [id, i]))
+    return [...sesion.snapshot].sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999))
+  }, [sesion.snapshot, sesion.ordenSesion])
+  const mover = (id: string, dir: -1 | 1) => {
+    const ids = lineas.map((l) => l.id)
+    const i = ids.indexOf(id)
+    const j = i + dir
+    if (j < 0 || j >= ids.length) return
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    return repo.actualizarSesion(sesion.id, { ordenSesion: ids })
+  }
 
   // Objetivos: se calculan una vez por línea (y se recalculan si cambia el ejercicio por sustitución).
   const firma = sesion.snapshot.map((l) => `${l.id}:${l.ejercicioId}`).join('|')
@@ -46,8 +82,9 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         if (!ej) continue
         const previas = await repo.previasDeEjercicio(l.ejercicioId, 8, sesion.id)
         const dias = await repo.diasDesdeUltima(l.ejercicioId, sesion.id)
+        const c = calibracion(previas)
         nuevo[l.id] = {
-          objetivo: (() => { const c = calibracion(previas); return objetivoParaHoy({ linea: l, ejercicio: ej, previas, esDeload: sesion.esDeload, diasDesdeUltima: dias, salto: c.salto, motivoSalto: c.motivo }) })(),
+          objetivo: objetivoParaHoy({ linea: l, ejercicio: ej, previas, esDeload: sesion.esDeload, diasDesdeUltima: dias, salto: c.salto, motivoSalto: c.motivo }),
           ultima: previas[0],
         }
       }
@@ -66,12 +103,12 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   const trabajoDe = (id: string) => (seriesPorLinea[id] ?? []).filter((s) => !s.calentamiento)
   const pendientes = (l: DiaEjercicioSnapshot) => Math.max(0, seriesPlan(l) - trabajoDe(l.id).length)
 
-  // La tarjeta activa es la primera con series pendientes, salvo que el usuario haya elegido otra.
-  const activaAuto = sesion.snapshot.find((l) => pendientes(l) > 0)?.id ?? null
+  const activaAuto = lineas.find((l) => pendientes(l) > 0)?.id ?? null
   const activa = expandida ?? activaAuto
+  const lineaActiva = lineas.find((l) => l.id === activa) ?? null
 
   const hechas = series.filter((s) => !s.calentamiento).length
-  const totales = sesion.snapshot.reduce((a, l) => a + seriesPlan(l), 0)
+  const totales = lineas.reduce((a, l) => a + seriesPlan(l), 0)
 
   const registrar = useCallback(
     async (l: DiaEjercicioSnapshot, datos: { carga: number; reps: number; rir: number | null; orden: number; objetivoCarga: number | null; objetivoReps: number | null; calentamiento?: boolean }) => {
@@ -94,8 +131,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
           calentamiento: !!datos.calentamiento,
         })
         if (datos.calentamiento) return
-        // Superserie: si el par tiene series pendientes, se pasa a él sin descanso largo.
-        const par = l.superserieCon ? sesion.snapshot.find((x) => x.id === l.superserieCon) : null
+        const par = l.superserieCon ? lineas.find((x) => x.id === l.superserieCon) : null
         const parPendiente = par && pendientes(par) > 0
         if (parPendiente) {
           setExpandida(par!.id)
@@ -108,12 +144,53 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         setGuardando(false)
       }
     },
-    [guardando, info, sesion, pendientes], // eslint-disable-line react-hooks/exhaustive-deps
+    [guardando, info, sesion, lineas, pendientes], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
-  const terminar = async (datos: { energia: number | null; dolor: number | null; sueno: number | null }) => {
+  // Notificación persistente (Android nativo): serie en curso, próxima y descanso; acciones Hecha / +30 s
+  const registrarRef = useRef(registrar)
+  registrarRef.current = registrar
+  const estadoRef = useRef({ lineaActiva, finTimer })
+  estadoRef.current = { lineaActiva, finTimer }
+  useEffect(() => {
+    if (!esNativa()) return
+    alAccionarNotificacion((accion) => {
+      const { lineaActiva: l, finTimer: f } = estadoRef.current
+      if (accion === 'mas30') { setFinTimer((f ?? Date.now()) + 30_000); return }
+      if (!l) return
+      const o = info[l.id]?.objetivo
+      const n = trabajoDe(l.id).length
+      const obj = o?.series[Math.min(n, (o?.series.length ?? 1) - 1)]
+      const carga = trabajoDe(l.id).at(-1)?.carga ?? obj?.carga ?? null
+      if (carga == null) return
+      registrarRef.current(l, { carga, reps: obj?.reps ?? l.repsMin, rir: null, orden: n + 1, objetivoCarga: obj?.carga ?? null, objetivoReps: obj?.reps ?? null })
+      void f
+    })
+    return () => alAccionarNotificacion(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [info])
+  useEffect(() => {
+    if (!esNativa()) return
+    if (!lineaActiva) { ocultarNotifSesion(); return }
+    const n = trabajoDe(lineaActiva.id).length
+    const o = info[lineaActiva.id]?.objetivo
+    const obj = o?.series[Math.min(n, (o?.series.length ?? 1) - 1)]
+    const carga = trabajoDe(lineaActiva.id).at(-1)?.carga ?? obj?.carga
+    const siguiente = lineas.find((l) => l.id !== lineaActiva.id && pendientes(l) > 0)
+    const descanso = finTimer && finTimer > Date.now() ? ` · descanso hasta ${new Date(finTimer).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''
+    mostrarNotifSesion({
+      titulo: `${lineaActiva.ejercicioNombre} · serie ${n + 1}/${seriesPlan(lineaActiva)}`,
+      cuerpo: `${carga != null ? `${kg(carga)} kg × ${obj?.reps ?? lineaActiva.repsMin} · RIR ${o?.rir ?? lineaActiva.rir}` : 'elegí la carga'}${descanso}${siguiente ? ` · después: ${siguiente.ejercicioNombre}` : ''}`,
+      finDescanso: finTimer,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineaActiva?.id, series.length, finTimer, info])
+  useEffect(() => () => { ocultarNotifSesion() }, [])
+
+  const terminar = async (datos: { energia: number | null; dolor: number | null; horasSueno: number | null }) => {
     if (hechas === 0) { await repo.descartarSesion(sesion.id); return }
-    await repo.terminarSesion(sesion.id, { ...datos, notas: '' })
+    const sueno = datos.horasSueno == null ? null : datos.horasSueno < 6 ? 1 : datos.horasSueno < 7.5 ? 2 : 3
+    await repo.terminarSesion(sesion.id, { energia: datos.energia, dolor: datos.dolor, sueno, horasSueno: datos.horasSueno, notas: '' })
     await correrCoachPostSesion(sesion.id)
     respaldarSiCorresponde().catch(() => {})
   }
@@ -127,11 +204,11 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="text-[11px] font-medium uppercase tracking-wider text-texto-3">
-            Semana {sesion.semana}{sesion.esDeload ? ' · descarga' : ''} · {duracion(transcurrido)}
+            Semana {sesion.semana}{sesion.esDeload ? ' · descarga' : ''}
           </div>
-          <div className="text-2xl font-bold">{sesion.diaNombre}</div>
+          <div className="truncate text-2xl font-bold">{sesion.diaNombre}</div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-semibold">{hechas}<span className="text-texto-3">/{totales}</span></div>
@@ -143,7 +220,20 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         <div className="h-full bg-acento transition-all" style={{ width: `${totales ? Math.min(100, (hechas / totales) * 100) : 0}%` }} />
       </div>
 
-      {sesion.snapshot.map((l) => {
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className={`font-mono text-lg font-semibold ${pausada ? 'text-aviso' : ''}`}>{duracion(transcurrido)}</span>
+          {pausada && <span className="text-[11px] uppercase tracking-wider text-aviso">en pausa</span>}
+        </div>
+        <div className="flex gap-1.5">
+          <button type="button" className="chip h-8 text-xs" onClick={pausada ? reanudar : pausar}>{pausada ? 'Reanudar' : 'Pausar'}</button>
+          <button type="button" className="chip h-8 text-xs" onClick={reiniciarTiempo}>Reiniciar</button>
+          <button type="button" className={`chip h-8 text-xs ${modoOrden ? 'chip-activo' : ''}`} onClick={() => setModoOrden(!modoOrden)}>{modoOrden ? 'Listo' : 'Reordenar'}</button>
+        </div>
+      </div>
+      {modoOrden && <div className="text-xs text-texto-2">Movés los ejercicios solo para hoy (máquina ocupada, etc.). El plan no cambia.</div>}
+
+      {lineas.map((l, i) => {
         const ej = ejercicios.get(l.ejercicioId)
         if (!ej) return null
         return (
@@ -154,15 +244,16 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
             objetivo={info[l.id]?.objetivo}
             ultima={info[l.id]?.ultima}
             series={seriesPorLinea[l.id] ?? []}
-            expandida={activa === l.id}
-            primero={sesion.snapshot[0]?.id === l.id}
-            superserieNombre={l.superserieCon ? sesion.snapshot.find((x) => x.id === l.superserieCon)?.ejercicioNombre : undefined}
-            onExpandir={() => setExpandida(activa === l.id ? '' : l.id)}
+            expandida={!modoOrden && activa === l.id}
+            primero={lineas[0]?.id === l.id}
+            superserieNombre={l.superserieCon ? lineas.find((x) => x.id === l.superserieCon)?.ejercicioNombre : undefined}
+            onExpandir={() => { if (!modoOrden) setExpandida(activa === l.id ? '' : l.id) }}
             onRegistrar={(d) => registrar(l, d)}
             onDeshacer={(id) => repo.desactivarSerie(id)}
             onEditar={(id, cambios) => repo.actualizarSerie(id, cambios)}
             onSustituir={() => setSustituyendo(l)}
             guardando={guardando}
+            orden={modoOrden ? { arriba: i > 0 ? () => mover(l.id, -1) : null, abajo: i < lineas.length - 1 ? () => mover(l.id, 1) : null } : undefined}
           />
         )
       })}
@@ -180,7 +271,7 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         </button>
       </div>
 
-      <Temporizador fin={finTimer} detalle={activa ? sesion.snapshot.find((x) => x.id === activa)?.ejercicioNombre : undefined} onSaltar={() => setFinTimer(null)} onSumar={(s) => setFinTimer((f) => (f ?? Date.now()) + s * 1000)} />
+      <Temporizador fin={finTimer} detalle={lineaActiva?.ejercicioNombre} onSaltar={() => setFinTimer(null)} onSumar={(s) => setFinTimer((f) => (f ?? Date.now()) + s * 1000)} />
 
       <Hoja abierta={!!sustituyendo} onCerrar={() => setSustituyendo(null)} titulo={`Sustituir ${sustituyendo?.ejercicioNombre ?? ''}`}>
         <p className="mb-3 text-sm text-texto-2">Mismo patrón. La sustitución queda registrada como tal; el plan no cambia.</p>
@@ -199,33 +290,39 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   )
 }
 
-function CierreSesion({ abierta, onCerrar, onTerminar, hechas, totales }: { abierta: boolean; onCerrar: () => void; onTerminar: (d: { energia: number | null; dolor: number | null; sueno: number | null }) => Promise<void>; hechas: number; totales: number }) {
+function CierreSesion({ abierta, onCerrar, onTerminar, hechas, totales }: { abierta: boolean; onCerrar: () => void; onTerminar: (d: { energia: number | null; dolor: number | null; horasSueno: number | null }) => Promise<void>; hechas: number; totales: number }) {
   const [energia, setEnergia] = useState<number | null>(null)
   const [dolor, setDolor] = useState<number | null>(null)
-  const [sueno, setSueno] = useState<number | null>(null)
+  const [horas, setHoras] = useState<number | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const textoEnergia = ['', 'Muy flojo: cargas pesadas, sin ganas.', 'Flojo: costó más de lo normal.', 'Normal: como siempre.', 'Bien: las series salieron con margen.', 'Enchufado: podría haber hecho más.'][energia ?? 0]
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar} titulo="Cerrar sesión">
-      <div className="mb-4 text-sm text-texto-2">{hechas} de {totales} series. Tres toques y listo; ninguno es obligatorio.</div>
+      <div className="mb-4 text-sm text-texto-2">{hechas} de {totales} series. Tres respuestas rápidas; ninguna es obligatoria.</div>
       <div className="space-y-4">
         <div>
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">Energía</div>
-          <Escala valor={energia} onCambio={setEnergia} opciones={[{ v: 1, t: 'Baja' }, { v: 2, t: 'Normal' }, { v: 3, t: 'Alta' }]} />
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">¿Cómo estuviste durante la sesión?</div>
+          <Escala valor={energia} onCambio={setEnergia} opciones={[{ v: 1, t: '1' }, { v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }, { v: 5, t: '5' }]} />
+          <div className="mt-1 min-h-4 text-xs text-texto-2">{energia ? textoEnergia : '1 muy flojo · 3 normal · 5 enchufado. Habla del rendimiento en el gimnasio, no de cómo llegaste.'}</div>
         </div>
         <div>
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">Dolor articular</div>
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">Dolor articular durante la sesión</div>
           <Escala valor={dolor} onCambio={setDolor} opciones={[{ v: 0, t: 'No' }, { v: 1, t: 'Leve' }, { v: 2, t: 'Moderado' }, { v: 3, t: 'Fuerte' }]} />
         </div>
         <div>
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">Sueño anoche</div>
-          <Escala valor={sueno} onCambio={setSueno} opciones={[{ v: 1, t: 'Mal' }, { v: 2, t: 'Normal' }, { v: 3, t: 'Bien' }]} />
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">Horas de sueño anoche</div>
+          <div className="flex items-center justify-between">
+            <Stepper valor={horas} paso={0.5} min={0} base={7} onCambio={setHoras} sufijo="h" grande vacio="—" />
+            <button type="button" className="chip" onClick={() => setHoras(null)}>No sé</button>
+          </div>
+          <div className="mt-1 text-xs text-texto-2">Tocá el número para escribirlo. Menos de 6 h cuenta como "mal" para el coach.</div>
         </div>
       </div>
       <button
         type="button"
         className="btn-grande mt-6"
         disabled={enviando}
-        onClick={async () => { setEnviando(true); try { await onTerminar({ energia, dolor, sueno }) } finally { setEnviando(false); onCerrar() } }}
+        onClick={async () => { setEnviando(true); try { await onTerminar({ energia, dolor, horasSueno: horas }) } finally { setEnviando(false); onCerrar() } }}
       >
         Guardar y terminar
       </button>

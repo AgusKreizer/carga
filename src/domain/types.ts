@@ -119,10 +119,18 @@ export interface Sesion {
   estado: EstadoSesion
   /** copia del día del plan al momento de iniciar */
   snapshot: DiaEjercicioSnapshot[]
+  /** 1–5: cómo estuvo durante la sesión (1 muy flojo, 5 enchufado). Sesiones viejas: 1–3 */
   energia: number | null
   dolor: number | null
+  /** 1 mal, 2 normal, 3 bien (derivado de horasSueno si está) */
   sueno: number | null
+  horasSueno?: number | null
   notas: string
+  /** orden de los ejercicios solo para esta sesión (ids de DiaEjercicio); si falta, el del plan */
+  ordenSesion?: string[]
+  /** cronómetro de sesión: pausa en curso y segundos acumulados en pausa */
+  pausadoDesde?: string | null
+  segundosPausados?: number
   activo: boolean
 }
 

@@ -153,8 +153,12 @@ export async function desactivarSerie(id: string): Promise<void> {
   await db.series.update(id, { activo: false })
 }
 
-export async function terminarSesion(id: string, datos: Pick<Sesion, 'energia' | 'dolor' | 'sueno' | 'notas'>): Promise<void> {
-  await db.sesiones.update(id, { ...datos, estado: 'terminada', fechaFin: ahoraISO() })
+export async function terminarSesion(id: string, datos: Pick<Sesion, 'energia' | 'dolor' | 'sueno' | 'notas'> & { horasSueno?: number | null }): Promise<void> {
+  await db.sesiones.update(id, { ...datos, estado: 'terminada', fechaFin: ahoraISO(), pausadoDesde: null })
+}
+
+export async function actualizarSesion(id: string, cambios: Partial<Sesion>): Promise<void> {
+  await db.sesiones.update(id, cambios)
 }
 
 export async function descartarSesion(id: string): Promise<void> {

@@ -24,9 +24,11 @@ interface Props {
   onDeshacer: (serieId: string) => void
   onEditar: (serieId: string, cambios: Partial<SerieLog>) => void
   onSustituir: () => void
+  /** modo reordenar (solo esta sesión): callbacks para subir/bajar la tarjeta */
+  orden?: { arriba: (() => void) | null; abajo: (() => void) | null }
 }
 
-export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: todas, expandida, superserieNombre, primero, guardando, onExpandir, onRegistrar, onDeshacer, onEditar, onSustituir }: Props) {
+export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: todas, expandida, superserieNombre, primero, guardando, onExpandir, onRegistrar, onDeshacer, onEditar, onSustituir, orden }: Props) {
   const series = todas.filter((s) => !s.calentamiento)
   const calentamientos = todas.filter((s) => s.calentamiento)
   const planificadas = objetivo?.series.length ?? linea.series
@@ -62,7 +64,14 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
 
   return (
     <div className={`tarjeta transition-colors ${expandida ? 'ring-1 ring-acento/50' : completa ? 'opacity-70' : ''}`}>
-      <button type="button" className="w-full text-left" onClick={onExpandir}>
+      <div className="flex items-start gap-2">
+      {orden && (
+        <div className="flex flex-col gap-1">
+          <button type="button" className="chip h-8 min-w-8 text-xs" disabled={!orden.arriba} onClick={() => orden.arriba?.()} aria-label="subir">↑</button>
+          <button type="button" className="chip h-8 min-w-8 text-xs" disabled={!orden.abajo} onClick={() => orden.abajo?.()} aria-label="bajar">↓</button>
+        </div>
+      )}
+      <button type="button" className="min-w-0 flex-1 text-left" onClick={onExpandir}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate text-base font-semibold">{ejercicio.nombre}</div>
@@ -76,6 +85,7 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
           </div>
         </div>
       </button>
+      </div>
 
       {expandida && (
         <div className="aparecer mt-3 space-y-3">
@@ -180,12 +190,21 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
 
 function HojaDiscos({ abierta, onCerrar, carga, smith, onElegir }: { abierta: boolean; onCerrar: () => void; carga: number; smith: boolean; onElegir: (c: number) => void }) {
   const ajustes = useAjustes()
+  const [barraHoy, setBarraHoy] = useState<number | null>(null)
   if (!ajustes) return null
-  const barra = smith ? ajustes.pesoBarraSmith : ajustes.pesoBarra
+  const barraDefault = smith ? ajustes.pesoBarraSmith : ajustes.pesoBarra
+  const barra = barraHoy ?? barraDefault
   const r = discosPorLado(carga, barra, ajustes.discos)
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar} titulo={`${kg(carga)} kg · discos por lado`}>
-      <div className="mb-3 text-xs text-texto-2">Barra {smith ? 'Smith' : ''} de {kg(barra)} kg. Cambiá barra y discos en Ajustes.</div>
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-texto-3">Barra de hoy</div>
+      <div className="mb-3 flex items-center gap-1.5">
+        {[barraDefault, 20, 15, 10, 7.5].filter((v, i, a) => a.indexOf(v) === i).map((b) => (
+          <button key={b} type="button" className={`chip ${barra === b ? 'chip-activo' : ''}`} onClick={() => setBarraHoy(b)}>{kg(b)}</button>
+        ))}
+        <Stepper valor={barra} paso={0.5} min={0} onCambio={setBarraHoy} />
+      </div>
+      <div className="mb-3 text-xs text-texto-2">Solo para esta serie. La barra habitual se cambia en Ajustes.</div>
       {r.porLado.length === 0 ? (
         <div className="text-sm text-texto-2">Solo la barra.</div>
       ) : (
