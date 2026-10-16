@@ -1,0 +1,46 @@
+# Compila la app de iPhone en la nube (Codemagic, Mac M2) y la sube a TestFlight.
+# Requisitos (una sola vez, ver docs/03-iphone.md):
+#  - Cuenta de Apple Developer y la app "Carga" creada en App Store Connect con bundle ar.carga.app.
+#  - Integración "App Store Connect" en Codemagic con nombre carga_asc (API key de App Store Connect).
+workflows:
+  ios-testflight:
+    name: iPhone → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: carga_asc
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ar.carga.app
+      vars:
+        APP_STORE_APPLE_ID: "0" # reemplazar por el Apple ID numérico de la app en App Store Connect
+    triggering:
+      events: [tag]
+      tag_patterns:
+        - pattern: 'ios-*'
+    scripts:
+      - name: Dependencias
+        script: npm ci
+      - name: Tests
+        script: npx vitest run
+      - name: Build web
+        script: npm run build
+      - name: Sincronizar Capacitor
+        script: npx cap sync ios
+      - name: Firma
+        script: xcode-project use-profiles
+      - name: Número de build
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
+      - name: Compilar IPA
+        script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
