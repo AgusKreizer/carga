@@ -14,6 +14,7 @@ import { Intro } from './ui/Intro'
 import { Logo } from './ui/componentes/Logo'
 import { sesionDesdeUrl } from './data/backup-supabase'
 import { restaurarTodo, type Respaldo } from './data/exportar'
+import { alIrA } from './ui/navegacion'
 
 type Tab = 'hoy' | 'plan' | 'progreso' | 'ajustes'
 
@@ -41,7 +42,8 @@ export default function App() {
   const [respaldoNube, setRespaldoNube] = useState<Respaldo | null>(null)
   useEffect(() => {
     alIniciar().then((r) => { if (r.ofrecer) setRespaldoNube(r.ofrecer) })
-    if (!esNativa()) return
+    const quitarIrA = alIrA((t) => setTab(t))
+    if (!esNativa()) return quitarIrA
     let quitar: (() => void) | null = null
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('appUrlOpen', async ({ url }) => {
@@ -49,7 +51,7 @@ export default function App() {
         else if (url.includes('#rutina=')) leerRutinaDelHash(url.slice(url.indexOf('#'))).then((r) => r && setRutinaEntrante(r))
       }).then((h) => { quitar = () => h.remove() })
     })
-    return () => { quitar?.() }
+    return () => { quitar?.(); quitarIrA() }
   }, [])
   useEffect(() => {
     if (!location.hash.includes('rutina=')) return

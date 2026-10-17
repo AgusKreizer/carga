@@ -8,6 +8,7 @@ import { useAjustes } from '../hooks'
 import { calentamientoSugerido } from '../../domain/coach/calentamiento'
 import { haceCuanto } from '../../lib/fechas'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
+import * as repo from '../../data/repo'
 
 interface Props {
   linea: DiaEjercicioSnapshot
@@ -61,6 +62,13 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
     onRegistrar({ carga, reps, rir, orden: n + 1, objetivoCarga: objSerie?.carga ?? null, objetivoReps: objSerie?.reps ?? null })
     setExtra(false)
   }
+  const anterior = series.length ? series[series.length - 1] : null
+  const repetirAnterior = () => {
+    if (!anterior || guardando) return
+    onRegistrar({ carga: anterior.carga, reps: anterior.reps, rir: rir ?? anterior.rir, orden: n + 1, objetivoCarga: objSerie?.carga ?? null, objetivoReps: objSerie?.reps ?? null })
+    setExtra(false)
+  }
+  const sinRir = series.filter((s) => s.rir == null)
 
   return (
     <div className={`tarjeta transition-colors ${expandida ? 'ring-1 ring-acento/50' : completa ? 'opacity-70' : ''}`}>
@@ -106,6 +114,8 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
 
           {(linea.nota || ejercicio.nota) && <div className="text-xs text-texto-2">{linea.nota || ejercicio.nota}</div>}
 
+          <NotaMaquina ejercicio={ejercicio} />
+
           {series.length === 0 && calentamientos.length === 0 && ESCOMPUESTO.includes(ejercicio.patron) && (carga ?? 0) >= 30 && (() => {
             const sug = calentamientoSugerido(carga ?? 0, paso, !!primero)
             if (!sug.length) return null
@@ -145,6 +155,12 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
             </ul>
           )}
 
+          {sinRir.length > 0 && (
+            <div className="rounded-xl bg-aviso/10 px-3 py-2 text-xs text-texto">
+              {sinRir.length === 1 ? 'Una serie quedó' : `${sinRir.length} series quedaron`} sin RIR. Tocala arriba para completarlo: sin RIR el coach no puede subirte la carga.
+            </div>
+          )}
+
           {(!completa || extra) && (
             <div className="space-y-3 rounded-xl border border-borde p-3">
               <div className="flex items-center justify-between">
@@ -173,6 +189,11 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
               <button type="button" className="btn-grande" disabled={carga == null || guardando} onClick={confirmar}>
                 ✓ Hecha
               </button>
+              {anterior && (
+                <button type="button" className="btn-secundario w-full" disabled={guardando} onClick={repetirAnterior}>
+                  Igual que la anterior · {kg(anterior.carga)} × {anterior.reps} · RIR {rirTexto(rir ?? anterior.rir)}
+                </button>
+              )}
             </div>
           )}
 
@@ -185,6 +206,33 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
         </div>
       )}
     </div>
+  )
+}
+
+/** Ajustes de la máquina (asiento, respaldo, polea): se guardan en el ejercicio y aparecen siempre. */
+function NotaMaquina({ ejercicio }: { ejercicio: Ejercicio }) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState(ejercicio.notaMaquina ?? '')
+  useEffect(() => setTexto(ejercicio.notaMaquina ?? ''), [ejercicio.notaMaquina])
+  const guardar = async () => {
+    await repo.actualizarEjercicio(ejercicio.id, { notaMaquina: texto.trim() })
+    setEditando(false)
+  }
+  if (editando) {
+    return (
+      <div className="flex gap-2">
+        <input autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardar()} placeholder="Asiento 4, respaldo 2, polea en la marca 7…" className="h-10 min-w-0 flex-1 rounded-xl bg-superficie-2 px-3 text-sm outline-none ring-1 ring-acento" />
+        <button type="button" className="chip h-10 bg-acento text-black" onClick={guardar}>Guardar</button>
+      </div>
+    )
+  }
+  return ejercicio.notaMaquina ? (
+    <button type="button" className="flex w-full items-start gap-2 rounded-xl bg-superficie-2 px-3 py-2 text-left text-sm" onClick={() => setEditando(true)}>
+      <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-texto-3">Máquina</span>
+      <span className="text-texto">{ejercicio.notaMaquina}</span>
+    </button>
+  ) : (
+    <button type="button" className="text-xs text-texto-3" onClick={() => setEditando(true)}>+ Anotar ajustes de la máquina (asiento, respaldo, polea)</button>
   )
 }
 

@@ -30,6 +30,8 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   const [sustituyendo, setSustituyendo] = useState<DiaEjercicioSnapshot | null>(null)
   const [transcurrido, setTranscurrido] = useState(0)
   const [modoOrden, setModoOrden] = useState(false)
+  // Sesión olvidada abierta: si al abrir la app pasaron más de 3 h desde que empezó, preguntar.
+  const [olvidada, setOlvidada] = useState(() => !sesion.pausadoDesde && Date.now() - new Date(sesion.fechaInicio).getTime() > 3 * 3_600_000)
 
   // Cronómetro de sesión con pausa (persistida en la sesión)
   const pausada = !!sesion.pausadoDesde
@@ -285,12 +287,23 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         </div>
       </Hoja>
 
-      <CierreSesion abierta={cerrando} onCerrar={() => setCerrando(false)} onTerminar={terminar} hechas={hechas} totales={totales} />
+      <Hoja abierta={olvidada} onCerrar={() => setOlvidada(false)} titulo={`¿Terminaste ${sesion.diaNombre}?`}>
+        <p className="mb-4 text-sm text-texto-2">
+          La sesión está abierta desde las {new Date(sesion.fechaInicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(sesion.fechaInicio).toDateString() !== new Date().toDateString() ? ` del ${new Date(sesion.fechaInicio).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}` : ''} con {hechas} series cargadas.
+        </p>
+        <div className="space-y-2">
+          <button type="button" className="btn-grande" onClick={() => { setOlvidada(false); setCerrando(true) }}>Sí, cerrarla</button>
+          <button type="button" className="btn-secundario w-full" onClick={() => setOlvidada(false)}>No, sigo entrenando</button>
+        </div>
+      </Hoja>
+
+      <CierreSesion abierta={cerrando} onCerrar={() => setCerrando(false)} onTerminar={terminar} hechas={hechas} totales={totales} sinRir={series.filter((s) => !s.calentamiento && s.rir == null).length} />
     </div>
   )
 }
 
-function CierreSesion({ abierta, onCerrar, onTerminar, hechas, totales }: { abierta: boolean; onCerrar: () => void; onTerminar: (d: { energia: number | null; dolor: number | null; horasSueno: number | null }) => Promise<void>; hechas: number; totales: number }) {
+function CierreSesion({ abierta, onCerrar, onTerminar, hechas, totales, sinRir }: { abierta: boolean; onCerrar: () => void; onTerminar: (d: { energia: number | null; dolor: number | null; horasSueno: number | null }) => Promise<void>; hechas: number; totales: number; sinRir: number }) {
   const [energia, setEnergia] = useState<number | null>(null)
   const [dolor, setDolor] = useState<number | null>(null)
   const [horas, setHoras] = useState<number | null>(null)
@@ -299,6 +312,11 @@ function CierreSesion({ abierta, onCerrar, onTerminar, hechas, totales }: { abie
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar} titulo="Cerrar sesión">
       <div className="mb-4 text-sm text-texto-2">{hechas} de {totales} series. Tres respuestas rápidas; ninguna es obligatoria.</div>
+      {sinRir > 0 && (
+        <div className="mb-4 rounded-xl bg-aviso/10 px-3 py-2 text-xs text-texto">
+          {sinRir === 1 ? 'Una serie quedó' : `${sinRir} series quedaron`} sin RIR. Cerrá esta ventana y tocalas en cada ejercicio para completarlo, o después desde Progreso → Historial. Sin RIR el coach no sube la carga de ese ejercicio.
+        </div>
+      )}
       <div className="space-y-4">
         <div>
           <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-texto-3">¿Cómo estuviste durante la sesión?</div>

@@ -6,6 +6,7 @@ import { consejoDeHoy } from '../../domain/coach/diaInteligente'
 import { Sesion } from './Sesion'
 import { ResumenSemanal } from './ResumenSemanal'
 import { InstalarBanner } from './InstalarBanner'
+import { EstadoRespaldo } from './EstadoRespaldo'
 import { Hoja, Stepper, Vacio } from '../componentes/basicos'
 import { ahoraISO, fechaConDia, fechaLocal, haceCuanto } from '../../lib/fechas'
 import { kg } from '../../lib/formato'
@@ -70,6 +71,8 @@ function Inicio() {
       <div className="text-sm text-texto-2">
         Hola {ajustes?.nombre ?? ''} · {fechaConDia(new Date().toISOString())}
       </div>
+
+      <EstadoRespaldo />
 
       {proximo && (
         <div className="tarjeta aparecer">

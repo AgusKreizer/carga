@@ -47,6 +47,8 @@ export interface Ejercicio {
   porQue: string
   /** incremento mínimo de carga en kg para este equipo */
   incremento: number
+  /** ajustes de la máquina del gimnasio (asiento, respaldo, polea…), los escribe el usuario */
+  notaMaquina?: string
   custom: boolean
   activo: boolean
   actualizado: string

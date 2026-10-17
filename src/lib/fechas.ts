@@ -58,7 +58,8 @@ export function haceCuanto(iso: string, ahora = new Date()): string {
 }
 
 export function duracion(seg: number): string {
-  const m = Math.floor(seg / 60)
+  const h = Math.floor(seg / 3600)
+  const m = Math.floor((seg % 3600) / 60)
   const s = seg % 60
-  return `${m}:${pad(s)}`
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
