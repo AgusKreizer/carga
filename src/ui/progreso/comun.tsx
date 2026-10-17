@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { SerieLog, Sesion } from '../../domain/types'
-import { Hoja } from '../componentes/basicos'
+import { Escala, Hoja, Stepper } from '../componentes/basicos'
 import { EditorSerie } from '../componentes/EditorSerie'
 import { fechaCorta } from '../../lib/fechas'
 import { kg, rirTexto } from '../../lib/formato'
@@ -35,6 +35,28 @@ export function Dato({ titulo, valor, delta, unidad, sub }: { titulo: string; va
 }
 
 /** Detalle de una sesión pasada, con edición de series (corregir, deshacer, agregar). */
+/** Respuestas del cierre (energía, dolor, sueño), editables después: si se cerró sin contestar, se completan acá. */
+function SensacionesSesion({ sesion }: { sesion: Sesion }) {
+  const set = (c: Partial<Sesion>) => repo.actualizarSesion(sesion.id, c)
+  return (
+    <div className="mt-5 space-y-3 border-t border-borde pt-4">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-texto-3">Cómo estuvo la sesión</div>
+      <div>
+        <div className="mb-1 text-xs text-texto-2">Rendimiento (1 muy flojo · 5 enchufado)</div>
+        <Escala valor={sesion.energia} onCambio={(v) => set({ energia: v })} opciones={[1, 2, 3, 4, 5].map((v) => ({ v, t: String(v) }))} />
+      </div>
+      <div>
+        <div className="mb-1 text-xs text-texto-2">Dolor articular</div>
+        <Escala valor={sesion.dolor} onCambio={(v) => set({ dolor: v })} opciones={[{ v: 0, t: 'No' }, { v: 1, t: 'Leve' }, { v: 2, t: 'Moderado' }, { v: 3, t: 'Fuerte' }]} />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-texto-2">Horas de sueño la noche anterior</div>
+        <Stepper valor={sesion.horasSueno ?? null} paso={0.5} min={0} base={7} sufijo="h" vacio="—" onCambio={(h) => set({ horasSueno: h, sueno: h < 6 ? 1 : h < 7.5 ? 2 : 3 })} />
+      </div>
+    </div>
+  )
+}
+
 export function DetalleSesionHoja({ sesion, series, onCerrar }: { sesion: Sesion | null; series: SerieLog[]; onCerrar: () => void }) {
   const ejercicios = useMapaEjercicios()
   const [editando, setEditando] = useState<string | null>(null)
@@ -89,11 +111,7 @@ export function DetalleSesionHoja({ sesion, series, onCerrar }: { sesion: Sesion
               )
             })}
           </div>
-          {(sesion.energia || sesion.dolor != null || sesion.sueno) && (
-            <div className="mt-3 text-xs text-texto-3">
-              {sesion.energia ? `Sesión ${sesion.energia}/5 · ` : ''}{sesion.dolor != null ? `Dolor ${['no', 'leve', 'moderado', 'fuerte'][sesion.dolor]} · ` : ''}{sesion.horasSueno != null ? `Sueño ${sesion.horasSueno} h` : sesion.sueno ? `Sueño ${['', 'mal', 'normal', 'bien'][sesion.sueno]}` : ''}
-            </div>
-          )}
+          <SensacionesSesion sesion={sesion} />
         </>
       )}
     </Hoja>

@@ -9,14 +9,20 @@ export function Hoja({ abierta, onCerrar, titulo, children }: { abierta: boolean
   }, [abierta, onCerrar])
   if (!abierta) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={onCerrar}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 pt-[calc(env(safe-area-inset-top,0px)+48px)]" onClick={onCerrar}>
       <div
-        className="aparecer max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-superficie p-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
+        className="aparecer flex max-h-full w-full max-w-md flex-col rounded-t-3xl bg-superficie"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-borde" />
-        {titulo && <h2 className="mb-4 text-lg font-semibold">{titulo}</h2>}
-        {children}
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-4">
+          <h2 className="min-w-0 truncate text-lg font-semibold">{titulo ?? ''}</h2>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-superficie-2 text-texto active:bg-borde">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto overscroll-contain px-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-2">
+          {children}
+        </div>
       </div>
     </div>
   )
