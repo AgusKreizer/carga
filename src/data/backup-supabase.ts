@@ -120,6 +120,8 @@ export async function subirBackup(): Promise<void> {
   const u = await usuarioActual()
   if (!sb || !u) throw new Error('No hay sesión en la nube.')
   const respaldo = await exportarTodo()
+  const terminadas = (respaldo.tablas.sesiones as { estado?: string }[]).filter((x) => x.estado === 'terminada').length
+  if (terminadas === 0) throw new Error('Este dispositivo no tiene sesiones guardadas: no se sube nada para no pisar tu respaldo.')
   const { error } = await sb.from('user_data').upsert({ user_id: u.id, data: respaldo, updated_at: ahoraISO() })
   if (error) throw error
   await repo.guardarAjustes({ ultimoBackup: ahoraISO() })

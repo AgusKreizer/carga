@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, crearCuenta, entrar, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
+import { bajarBackup, cerrarSesionNube, crearCuenta, definirClave, entrar, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -140,6 +140,12 @@ export function Ajustes() {
                   await restaurarTodo(r); location.reload()
                 } catch (e) { aviso((e as Error).message) }
               }}>Restaurar de la nube</button>
+            </div>
+            <div className="flex gap-2">
+              <input value={clave} onChange={(e) => setClave(e.target.value)} type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 6)" className={input} />
+              <button type="button" className="btn-secundario shrink-0" disabled={clave.length < 6} onClick={async () => {
+                try { await definirClave(clave); setClave(''); aviso('Contraseña guardada. Usala para Entrar en Carga desde cualquier lado.') } catch (e) { aviso((e as Error).message) }
+              }}>Cambiar contraseña</button>
             </div>
             <button type="button" className="w-full py-1 text-sm text-texto-3" onClick={async () => { await cerrarSesionNube(); setUsuario(null) }}>Cerrar sesión</button>
           </>
