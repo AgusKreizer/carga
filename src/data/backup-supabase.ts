@@ -48,7 +48,35 @@ export async function crearCuenta(email: string, clave: string): Promise<'conect
   if (!sb) throw new Error('Supabase no está configurado.')
   const { data, error } = await sb.auth.signUp({ email: email.trim(), password: clave, options: { emailRedirectTo: 'https://aguskreizer.github.io/carga/' } })
   if (error) throw new Error(traducir(error.message))
+  // Supabase no avisa si el mail ya existe: devuelve un usuario sin identidades y no manda nada.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) throw new Error('Ese mail ya tiene cuenta. Si no tenés contraseña o no te la acordás, tocá "Crear o recuperar contraseña".')
   return data.session ? 'conectado' : 'confirmar'
+}
+
+const URL_APP = 'https://aguskreizer.github.io/carga/'
+
+/** Mail para definir o recuperar la contraseña. El link abre la web, donde se elige la nueva. */
+export async function enviarRecuperacion(email: string): Promise<void> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: URL_APP })
+  if (error) throw new Error(/rate limit|security purposes/i.test(error.message) ? 'Ya se mandó un mail hace poco. Esperá unos minutos y revisá spam.' : error.message)
+}
+
+/** Si la página se abrió desde el mail de recuperación, deja la sesión lista para cambiar la contraseña. */
+export async function esRecuperacion(): Promise<boolean> {
+  if (!/type=recovery/.test(location.hash)) return false
+  const sb = await clienteSupabase()
+  if (!sb) return false
+  await sb.auth.getSession() // procesa el hash de la URL
+  return true
+}
+
+export async function definirClave(clave: string): Promise<void> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const { error } = await sb.auth.updateUser({ password: clave })
+  if (error) throw new Error(traducir(error.message))
 }
 
 export async function entrar(email: string, clave: string): Promise<void> {

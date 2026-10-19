@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, crearCuenta, entrar, subirBackup, usuarioActual } from '../../data/backup-supabase'
+import { bajarBackup, cerrarSesionNube, crearCuenta, entrar, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -121,7 +121,10 @@ export function Ajustes() {
             {esperandoConfirmacion && (
               <p className="rounded-xl bg-aviso/10 px-3 py-2 text-xs text-texto">Te llegó un mail de confirmación. Tocá el link (puede abrirse en Safari, no importa), volvé a Carga y tocá <b>Entrar</b> con el mismo mail y contraseña.</p>
             )}
-            <p className="text-[11px] text-texto-3">Primera vez: Crear cuenta. Después, o en otro teléfono: Entrar.</p>
+            <button type="button" className="w-full py-1 text-center text-sm text-acento" disabled={!email.includes('@')} onClick={async () => {
+              try { await enviarRecuperacion(email); aviso('Te mandamos un mail para elegir la contraseña. Revisá también spam.') } catch (e) { aviso((e as Error).message) }
+            }}>Crear o recuperar contraseña</button>
+            <p className="text-[11px] text-texto-3">Primera vez: Crear cuenta. Si el mail ya tiene cuenta o no te acordás la contraseña: escribí el mail y tocá "Crear o recuperar contraseña"; el link se abre en Safari, elegís la contraseña ahí y volvés a Carga a tocar Entrar.</p>
           </div>
         )}
         {usuario && (

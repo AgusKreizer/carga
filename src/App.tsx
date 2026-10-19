@@ -12,7 +12,7 @@ import { alIniciar } from './data/sincronizacion'
 import { esNativa } from './lib/nativo'
 import { Intro } from './ui/Intro'
 import { Logo } from './ui/componentes/Logo'
-import { sesionDesdeUrl } from './data/backup-supabase'
+import { definirClave, esRecuperacion, sesionDesdeUrl } from './data/backup-supabase'
 import { restaurarTodo, type Respaldo } from './data/exportar'
 import { alIrA } from './ui/navegacion'
 
@@ -40,6 +40,10 @@ export default function App() {
   const [onboardingCerrado, setOnboardingCerrado] = useState(false)
   const mostrarOnboarding = !!ajustes && !ajustes.onboardingHecho && terminadas.length === 0 && !onboardingCerrado && !rutinaEntrante
   const [respaldoNube, setRespaldoNube] = useState<Respaldo | null>(null)
+  const [recuperando, setRecuperando] = useState(false)
+  const [claveNueva, setClaveNueva] = useState('')
+  const [msgClave, setMsgClave] = useState<string | null>(null)
+  useEffect(() => { esRecuperacion().then((r) => { if (r) { setRecuperando(true); setIntro(false) } }) }, [])
   useEffect(() => {
     alIniciar().then((r) => { if (r.ofrecer) setRespaldoNube(r.ofrecer) })
     const quitarIrA = alIrA((t) => setTab(t))
@@ -93,6 +97,23 @@ export default function App() {
           {tab === 'ajustes' && <Ajustes />}
         </LimiteError>
       </main>
+
+      <Hoja abierta={recuperando} onCerrar={() => { setRecuperando(false); history.replaceState(null, '', location.pathname) }} titulo="Elegí tu contraseña">
+        {msgClave ? (
+          <div className="space-y-3">
+            <p className="text-sm">{msgClave}</p>
+            <button type="button" className="btn-grande" onClick={() => { setRecuperando(false); history.replaceState(null, '', location.pathname) }}>Listo</button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <input value={claveNueva} onChange={(e) => setClaveNueva(e.target.value)} type="password" autoComplete="new-password" placeholder="Contraseña nueva (mínimo 6)" className="h-12 w-full rounded-xl bg-superficie-2 px-3 text-base outline-none" />
+            <button type="button" className="btn-grande" disabled={claveNueva.length < 6} onClick={async () => {
+              try { await definirClave(claveNueva); setClaveNueva(''); setMsgClave('Contraseña guardada. Si usás Carga desde la pantalla de inicio del iPhone, abrila y en Ajustes → Nube tocá Entrar con tu mail y esta contraseña.') }
+              catch (e) { setMsgClave((e as Error).message) }
+            }}>Guardar contraseña</button>
+          </div>
+        )}
+      </Hoja>
 
       <Hoja abierta={!!respaldoNube} onCerrar={() => setRespaldoNube(null)} titulo="Hay un respaldo en la nube">
         {respaldoNube && (
