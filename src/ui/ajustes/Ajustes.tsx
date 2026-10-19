@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, enviarMagicLink, subirBackup, usuarioActual, verificarCodigo } from '../../data/backup-supabase'
+import { bajarBackup, cerrarSesionNube, crearCuenta, entrar, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -15,8 +15,8 @@ export function Ajustes() {
   const [msg, setMsg] = useState<string | null>(null)
   const [usuario, setUsuario] = useState<{ email: string | null } | null>(null)
   const [email, setEmail] = useState('')
-  const [codigoEnviado, setCodigoEnviado] = useState(false)
-  const [codigo, setCodigo] = useState('')
+  const [clave, setClave] = useState('')
+  const [esperandoConfirmacion, setEsperandoConfirmacion] = useState(false)
   const archivo = useRef<HTMLInputElement>(null)
 
   useEffect(() => { usuarioActual().then(setUsuario).catch(() => setUsuario(null)) }, [a?.supabaseUrl, a?.supabaseAnonKey])
@@ -104,19 +104,24 @@ export function Ajustes() {
         <input defaultValue={a.supabaseAnonKey} placeholder="anon key" onBlur={(e) => repo.guardarAjustes({ supabaseAnonKey: e.target.value.trim() })} className={input} />
         {a.supabaseUrl && a.supabaseAnonKey && !usuario && (
           <div className="space-y-2">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@mail.com" type="email" inputMode="email" autoCapitalize="none" autoComplete="email" className={input} />
+            <input value={clave} onChange={(e) => setClave(e.target.value)} placeholder="Contraseña (mínimo 6)" type="password" autoComplete="current-password" className={input} />
             <div className="flex gap-2">
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@mail.com" inputMode="email" autoCapitalize="none" className={input} />
-              <button type="button" className="btn-secundario shrink-0" disabled={!email.includes('@')} onClick={async () => { try { await enviarMagicLink(email); setCodigoEnviado(true); aviso('Te mandamos un mail con un código de 6 dígitos.') } catch (e) { aviso((e as Error).message) } }}>{codigoEnviado ? 'Reenviar' : 'Enviar código'}</button>
+              <button type="button" className="btn-secundario flex-1 bg-acento text-black" disabled={!email.includes('@') || clave.length < 6} onClick={async () => {
+                try { await entrar(email, clave); const u = await usuarioActual(); setUsuario(u); setClave(''); await subirBackup(); aviso('Conectado. Respaldo subido.') } catch (e) { aviso((e as Error).message) }
+              }}>Entrar</button>
+              <button type="button" className="btn-secundario flex-1" disabled={!email.includes('@') || clave.length < 6} onClick={async () => {
+                try {
+                  const r = await crearCuenta(email, clave)
+                  if (r === 'conectado') { const u = await usuarioActual(); setUsuario(u); setClave(''); await subirBackup(); aviso('Cuenta creada y respaldo subido.') }
+                  else { setEsperandoConfirmacion(true); aviso('Revisá el mail y tocá el link de confirmación.') }
+                } catch (e) { aviso((e as Error).message) }
+              }}>Crear cuenta</button>
             </div>
-            {codigoEnviado && (
-              <div className="flex gap-2">
-                <input value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Código de 6 dígitos" inputMode="numeric" autoComplete="one-time-code" className={`${input} tracking-[0.3em]`} />
-                <button type="button" className="btn-secundario shrink-0 bg-acento text-black" disabled={codigo.length !== 6} onClick={async () => {
-                  try { await verificarCodigo(email, codigo); const u = await usuarioActual(); setUsuario(u); await subirBackup(); aviso('Conectado. Primer respaldo subido.') } catch (e) { aviso((e as Error).message) }
-                }}>Conectar</button>
-              </div>
+            {esperandoConfirmacion && (
+              <p className="rounded-xl bg-aviso/10 px-3 py-2 text-xs text-texto">Te llegó un mail de confirmación. Tocá el link (puede abrirse en Safari, no importa), volvé a Carga y tocá <b>Entrar</b> con el mismo mail y contraseña.</p>
             )}
-            <p className="text-[11px] text-texto-3">Escribí el código del mail acá: no toques el link si usás la app desde la pantalla de inicio del iPhone (abre Safari, que guarda aparte).</p>
+            <p className="text-[11px] text-texto-3">Primera vez: Crear cuenta. Después, o en otro teléfono: Entrar.</p>
           </div>
         )}
         {usuario && (

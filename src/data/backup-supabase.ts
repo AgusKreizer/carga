@@ -39,6 +39,34 @@ export async function cerrarSesionNube(): Promise<void> {
 }
 
 /**
+ * Cuenta con mail y contraseña: funciona igual en la web, en la app de la pantalla de inicio del iPhone
+ * y en la nativa. La confirmación del mail (si el proyecto la pide) se resuelve en el servidor, así que
+ * el link puede abrirse en cualquier navegador.
+ */
+export async function crearCuenta(email: string, clave: string): Promise<'conectado' | 'confirmar'> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const { data, error } = await sb.auth.signUp({ email: email.trim(), password: clave, options: { emailRedirectTo: 'https://aguskreizer.github.io/carga/' } })
+  if (error) throw new Error(traducir(error.message))
+  return data.session ? 'conectado' : 'confirmar'
+}
+
+export async function entrar(email: string, clave: string): Promise<void> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: clave })
+  if (error) throw new Error(traducir(error.message))
+}
+
+function traducir(m: string): string {
+  if (/invalid login credentials/i.test(m)) return 'Mail o contraseña incorrectos.'
+  if (/email not confirmed/i.test(m)) return 'Falta confirmar el mail: abrí el link que te llegó y volvé a tocar Entrar.'
+  if (/already registered/i.test(m)) return 'Ese mail ya tiene cuenta: tocá Entrar.'
+  if (/at least 6/i.test(m)) return 'La contraseña tiene que tener al menos 6 caracteres.'
+  return m
+}
+
+/**
  * Login con el código de 6 dígitos del mail. Es el camino que funciona en iPhone con la app en la
  * pantalla de inicio: el link abriría Safari, que tiene otro almacenamiento que la app instalada.
  */
