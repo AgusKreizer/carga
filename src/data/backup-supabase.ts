@@ -38,6 +38,17 @@ export async function cerrarSesionNube(): Promise<void> {
   await sb?.auth.signOut()
 }
 
+/**
+ * Login con el código de 6 dígitos del mail. Es el camino que funciona en iPhone con la app en la
+ * pantalla de inicio: el link abriría Safari, que tiene otro almacenamiento que la app instalada.
+ */
+export async function verificarCodigo(email: string, codigo: string): Promise<void> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: codigo.trim(), type: 'email' })
+  if (error) throw new Error(error.message.includes('expired') || error.message.includes('invalid') ? 'Código vencido o incorrecto. Pedí uno nuevo.' : error.message)
+}
+
 /** En la app nativa, el magic link vuelve por deep link: se toma la sesión de la URL. */
 export async function sesionDesdeUrl(url: string): Promise<boolean> {
   const t = tokensDeUrl(url)

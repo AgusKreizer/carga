@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, enviarMagicLink, subirBackup, usuarioActual } from '../../data/backup-supabase'
+import { bajarBackup, cerrarSesionNube, enviarMagicLink, subirBackup, usuarioActual, verificarCodigo } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -15,6 +15,8 @@ export function Ajustes() {
   const [msg, setMsg] = useState<string | null>(null)
   const [usuario, setUsuario] = useState<{ email: string | null } | null>(null)
   const [email, setEmail] = useState('')
+  const [codigoEnviado, setCodigoEnviado] = useState(false)
+  const [codigo, setCodigo] = useState('')
   const archivo = useRef<HTMLInputElement>(null)
 
   useEffect(() => { usuarioActual().then(setUsuario).catch(() => setUsuario(null)) }, [a?.supabaseUrl, a?.supabaseAnonKey])
@@ -101,9 +103,20 @@ export function Ajustes() {
         <input defaultValue={a.supabaseUrl} placeholder="https://xxxx.supabase.co" onBlur={(e) => repo.guardarAjustes({ supabaseUrl: e.target.value.trim() })} className={input} />
         <input defaultValue={a.supabaseAnonKey} placeholder="anon key" onBlur={(e) => repo.guardarAjustes({ supabaseAnonKey: e.target.value.trim() })} className={input} />
         {a.supabaseUrl && a.supabaseAnonKey && !usuario && (
-          <div className="flex gap-2">
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@mail.com" inputMode="email" className={input} />
-            <button type="button" className="btn-secundario shrink-0" onClick={async () => { try { await enviarMagicLink(email); aviso('Revisá el mail y tocá el link.') } catch (e) { aviso((e as Error).message) } }}>Enviar link</button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@mail.com" inputMode="email" autoCapitalize="none" className={input} />
+              <button type="button" className="btn-secundario shrink-0" disabled={!email.includes('@')} onClick={async () => { try { await enviarMagicLink(email); setCodigoEnviado(true); aviso('Te mandamos un mail con un código de 6 dígitos.') } catch (e) { aviso((e as Error).message) } }}>{codigoEnviado ? 'Reenviar' : 'Enviar código'}</button>
+            </div>
+            {codigoEnviado && (
+              <div className="flex gap-2">
+                <input value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Código de 6 dígitos" inputMode="numeric" autoComplete="one-time-code" className={`${input} tracking-[0.3em]`} />
+                <button type="button" className="btn-secundario shrink-0 bg-acento text-black" disabled={codigo.length !== 6} onClick={async () => {
+                  try { await verificarCodigo(email, codigo); const u = await usuarioActual(); setUsuario(u); await subirBackup(); aviso('Conectado. Primer respaldo subido.') } catch (e) { aviso((e as Error).message) }
+                }}>Conectar</button>
+              </div>
+            )}
+            <p className="text-[11px] text-texto-3">Escribí el código del mail acá: no toques el link si usás la app desde la pantalla de inicio del iPhone (abre Safari, que guarda aparte).</p>
           </div>
         )}
         {usuario && (

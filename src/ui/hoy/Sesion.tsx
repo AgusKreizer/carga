@@ -30,6 +30,10 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
   const [sustituyendo, setSustituyendo] = useState<DiaEjercicioSnapshot | null>(null)
   const [transcurrido, setTranscurrido] = useState(0)
   const [modoOrden, setModoOrden] = useState(false)
+  // Vista foco (un ejercicio a la vez, deslizar de costado) o lista. Se recuerda por dispositivo.
+  const [foco, setFoco] = useState<boolean>(() => { try { return localStorage.getItem('carga.vista') !== 'lista' } catch { return true } })
+  const cambiarVista = (f: boolean) => { setFoco(f); try { localStorage.setItem('carga.vista', f ? 'foco' : 'lista') } catch { /* sin storage */ } }
+  const toque = useRef<{ x: number; y: number } | null>(null)
   // Sesión olvidada abierta: si al abrir la app pasaron más de 3 h desde que empezó, preguntar.
   const [olvidada, setOlvidada] = useState(() => !sesion.pausadoDesde && Date.now() - new Date(sesion.fechaInicio).getTime() > 3 * 3_600_000)
 
@@ -230,12 +234,71 @@ export function Sesion({ sesion }: { sesion: TSesion }) {
         <div className="flex gap-1.5">
           <button type="button" className="chip h-8 text-xs" onClick={pausada ? reanudar : pausar}>{pausada ? 'Reanudar' : 'Pausar'}</button>
           <button type="button" className="chip h-8 text-xs" onClick={reiniciarTiempo}>Reiniciar</button>
-          <button type="button" className={`chip h-8 text-xs ${modoOrden ? 'chip-activo' : ''}`} onClick={() => setModoOrden(!modoOrden)}>{modoOrden ? 'Listo' : 'Reordenar'}</button>
+          <button type="button" className={`chip h-8 text-xs ${modoOrden ? 'chip-activo' : ''}`} onClick={() => { setModoOrden(!modoOrden); if (!modoOrden) cambiarVista(false) }}>{modoOrden ? 'Listo' : 'Reordenar'}</button>
+          <button type="button" className="chip h-8 text-xs" onClick={() => { setModoOrden(false); cambiarVista(!foco) }} aria-label={foco ? 'ver lista' : 'ver de a uno'}>{foco ? 'Lista' : 'Foco'}</button>
         </div>
       </div>
       {modoOrden && <div className="text-xs text-texto-2">Movés los ejercicios solo para hoy (máquina ocupada, etc.). El plan no cambia.</div>}
 
-      {lineas.map((l, i) => {
+      {foco && !modoOrden && (() => {
+        const actual = lineaActiva ?? lineas[0]
+        if (!actual) return null
+        const i = lineas.findIndex((l) => l.id === actual.id)
+        const ej = ejercicios.get(actual.ejercicioId)
+        if (!ej) return null
+        const ir = (d: -1 | 1) => { const j = i + d; if (j >= 0 && j < lineas.length) setExpandida(lineas[j].id) }
+        const siguiente = lineas.slice(i + 1).find((l) => pendientes(l) > 0) ?? lineas.slice(0, i).find((l) => pendientes(l) > 0)
+        return (
+          <div
+            onTouchStart={(e) => { toque.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }}
+            onTouchEnd={(e) => {
+              const t = toque.current; toque.current = null
+              if (!t) return
+              const dx = e.changedTouches[0].clientX - t.x
+              const dy = e.changedTouches[0].clientY - t.y
+              if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) ir(dx < 0 ? 1 : -1)
+            }}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <button type="button" className="chip h-9 min-w-9" disabled={i === 0} onClick={() => ir(-1)} aria-label="ejercicio anterior">‹</button>
+              <div className="flex flex-1 justify-center gap-1.5">
+                {lineas.map((l) => {
+                  const hecho = pendientes(l) === 0
+                  return <button key={l.id} type="button" onClick={() => setExpandida(l.id)} aria-label={l.ejercicioNombre} className={`h-2 rounded-full transition-all ${l.id === actual.id ? 'w-6 bg-acento' : hecho ? 'w-2 bg-ok' : 'w-2 bg-borde'}`} />
+                })}
+              </div>
+              <button type="button" className="chip h-9 min-w-9" disabled={i === lineas.length - 1} onClick={() => ir(1)} aria-label="ejercicio siguiente">›</button>
+            </div>
+            <div className="mb-2 text-center text-[11px] text-texto-3">Ejercicio {i + 1} de {lineas.length} · deslizá para cambiar</div>
+            <TarjetaEjercicio
+              key={actual.id}
+              linea={actual}
+              ejercicio={ej}
+              objetivo={info[actual.id]?.objetivo}
+              ultima={info[actual.id]?.ultima}
+              series={seriesPorLinea[actual.id] ?? []}
+              expandida
+              primero={i === 0}
+              superserieNombre={actual.superserieCon ? lineas.find((x) => x.id === actual.superserieCon)?.ejercicioNombre : undefined}
+              onExpandir={() => {}}
+              onRegistrar={(d) => registrar(actual, d)}
+              onDeshacer={(id) => repo.desactivarSerie(id)}
+              onEditar={(id, cambios) => repo.actualizarSerie(id, cambios)}
+              onSustituir={() => setSustituyendo(actual)}
+              guardando={guardando}
+            />
+            {siguiente && siguiente.id !== actual.id && (
+              <button type="button" className="mt-2 flex w-full items-center justify-between rounded-xl bg-superficie px-4 py-3 text-left text-sm" onClick={() => setExpandida(siguiente.id)}>
+                <span className="text-texto-3">Después</span>
+                <span className="truncate font-medium">{siguiente.ejercicioNombre}</span>
+                <span className="text-texto-3">{pendientes(siguiente)} series ›</span>
+              </button>
+            )}
+          </div>
+        )
+      })()}
+
+      {(!foco || modoOrden) && lineas.map((l, i) => {
         const ej = ejercicios.get(l.ejercicioId)
         if (!ej) return null
         return (
