@@ -125,7 +125,7 @@ export default function App() {
         )}
       </Hoja>
 
-      <Onboarding abierto={mostrarOnboarding && !respaldoNube} onCerrar={() => setOnboardingCerrado(true)} permitirSaltar />
+      <Onboarding abierto={mostrarOnboarding && !respaldoNube && !recuperando} onCerrar={() => setOnboardingCerrado(true)} permitirSaltar />
 
       <Hoja abierta={!!rutinaEntrante} onCerrar={() => setRutinaEntrante(null)} titulo="Te compartieron una rutina">
         {rutinaEntrante && (
