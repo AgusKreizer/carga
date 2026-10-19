@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, crearCuenta, definirClave, entrar, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
+import { bajarBackup, cerrarSesionNube, crearCuenta, definirClave, entrar, entrarConLink, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -17,6 +17,7 @@ export function Ajustes() {
   const [email, setEmail] = useState('')
   const [clave, setClave] = useState('')
   const [esperandoConfirmacion, setEsperandoConfirmacion] = useState(false)
+  const [linkPegado, setLinkPegado] = useState('')
   const archivo = useRef<HTMLInputElement>(null)
 
   useEffect(() => { usuarioActual().then(setUsuario).catch(() => setUsuario(null)) }, [a?.supabaseUrl, a?.supabaseAnonKey])
@@ -124,6 +125,20 @@ export function Ajustes() {
             <button type="button" className="w-full py-1 text-center text-sm text-acento" disabled={!email.includes('@')} onClick={async () => {
               try { await enviarRecuperacion(email); aviso('Te mandamos un mail para elegir la contraseña. Revisá también spam.') } catch (e) { aviso((e as Error).message) }
             }}>Crear o recuperar contraseña</button>
+            <div className="space-y-2 rounded-xl border border-borde p-3">
+              <div className="text-xs text-texto-2"><b>¿Te llegó el mail de Supabase?</b> No toques el link: mantenelo apretado → <b>Copiar</b>, y pegalo acá.</div>
+              <div className="flex gap-2">
+                <input value={linkPegado} onChange={(e) => setLinkPegado(e.target.value)} placeholder="Pegá el link del mail" autoCapitalize="none" className={input} />
+                <button type="button" className="btn-secundario shrink-0 bg-acento text-black" disabled={!linkPegado.includes('token=')} onClick={async () => {
+                  try {
+                    await entrarConLink(linkPegado); setLinkPegado('')
+                    const u = await usuarioActual(); setUsuario(u)
+                    aviso('Conectado. Ahora elegí tu contraseña abajo y tocá Cambiar contraseña.')
+                    subirBackup().catch(() => {})
+                  } catch (e) { aviso((e as Error).message) }
+                }}>Usar link</button>
+              </div>
+            </div>
             <p className="text-[11px] text-texto-3">Primera vez: Crear cuenta. Si el mail ya tiene cuenta o no te acordás la contraseña: escribí el mail y tocá "Crear o recuperar contraseña"; el link se abre en Safari, elegís la contraseña ahí y volvés a Carga a tocar Entrar.</p>
           </div>
         )}

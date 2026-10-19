@@ -72,6 +72,22 @@ export async function esRecuperacion(): Promise<boolean> {
   return true
 }
 
+/**
+ * Entra con el link del mail pegado dentro de la app (sin abrirlo en Safari).
+ * El link es .../auth/v1/verify?token=<hash>&type=recovery|magiclink|signup...
+ */
+export async function entrarConLink(texto: string): Promise<'recovery' | 'otro'> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const limpio = texto.trim().replace(/&amp;/g, '&')
+  const token = limpio.match(/[?&]token=([^&\s]+)/)?.[1]
+  const tipo = (limpio.match(/[?&]type=([a-z_]+)/)?.[1] ?? 'recovery') as 'recovery' | 'magiclink' | 'signup' | 'email' | 'invite' | 'email_change'
+  if (!token) throw new Error('No encontré el código en lo que pegaste. Mantené apretado el link del mail, tocá Copiar y pegalo acá.')
+  const { error } = await sb.auth.verifyOtp({ token_hash: decodeURIComponent(token), type: tipo === 'magiclink' ? 'email' : tipo })
+  if (error) throw new Error(/expired|invalid/i.test(error.message) ? 'Ese link ya se usó o venció (sirve una sola vez y dura 60 min). Pedí uno nuevo.' : error.message)
+  return tipo === 'recovery' ? 'recovery' : 'otro'
+}
+
 export async function definirClave(clave: string): Promise<void> {
   const sb = await clienteSupabase()
   if (!sb) throw new Error('Supabase no está configurado.')
