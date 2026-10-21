@@ -220,6 +220,8 @@ export interface Ajustes {
   /** código de respaldo automático (cuenta sin mail); se muestra para guardarlo */
   codigoRespaldo?: string
   codigoGuardado?: boolean
+  /** sonido al terminar el descanso (por defecto sí) */
+  sonidoDescanso?: boolean
   /** calculadora de discos */
   pesoBarra: number
   pesoBarraSmith: number

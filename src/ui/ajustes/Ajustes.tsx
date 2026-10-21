@@ -8,6 +8,7 @@ import { Stepper } from '../componentes/basicos'
 import { fechaLocal, haceCuanto } from '../../lib/fechas'
 import { pedirPermisoNotificaciones, permisoNotificaciones } from '../../lib/notificaciones'
 import { generarICS } from '../../lib/calendario-ics'
+import { sonarFinDescanso } from '../../lib/sonido'
 import { esNativa, programarRecordatorios } from '../../lib/nativo'
 
 export function Ajustes() {
@@ -66,6 +67,14 @@ export function Ajustes() {
       </Seccion>
 
       <Seccion titulo="Descanso">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm">Sonido al terminar el descanso</div>
+          <div className="flex gap-1.5">
+            <button type="button" className={`chip ${a.sonidoDescanso !== false ? 'chip-activo' : ''}`} onClick={() => { repo.guardarAjustes({ sonidoDescanso: true }); sonarFinDescanso() }}>Sí</button>
+            <button type="button" className={`chip ${a.sonidoDescanso === false ? 'chip-activo' : ''}`} onClick={() => repo.guardarAjustes({ sonidoDescanso: false })}>No</button>
+          </div>
+        </div>
+        <div className="text-[11px] text-texto-3">Suena con la app abierta (aviso suave a 3 s del final y tres pitidos al terminar). Si el iPhone está en silencio con el botón lateral, no suena.</div>
         <NotificacionesToggle />
       </Seccion>
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { duracion } from '../../lib/fechas'
 import { notificarDescansoListo } from '../../lib/notificaciones'
 import { cancelarFinDescanso, esNativa, programarFinDescanso, vibrar } from '../../lib/nativo'
+import { sonarAviso, sonarFinDescanso } from '../../lib/sonido'
+import { useAjustes } from '../hooks'
 
 /**
  * Timer de descanso basado en hora de fin (sobrevive a pantalla apagada).
@@ -9,6 +11,8 @@ import { cancelarFinDescanso, esNativa, programarFinDescanso, vibrar } from '../
  */
 export function Temporizador({ fin, detalle, onSaltar, onSumar }: { fin: number | null; detalle?: string; onSaltar: () => void; onSumar: (seg: number) => void }) {
   const [ahora, setAhora] = useState(Date.now())
+  const ajustes = useAjustes()
+  const conSonido = ajustes?.sonidoDescanso !== false
   useEffect(() => {
     if (!fin) return
     const id = window.setInterval(() => setAhora(Date.now()), 250)
@@ -21,10 +25,13 @@ export function Temporizador({ fin, detalle, onSaltar, onSumar }: { fin: number 
     if (esNativa()) programarFinDescanso(fin, detalle ?? 'Siguiente serie')
     const id = window.setTimeout(() => {
       vibrar()
+      if (conSonido && document.visibilityState === 'visible') sonarFinDescanso()
       if (!esNativa() && document.visibilityState !== 'visible') notificarDescansoListo(detalle ?? 'Siguiente serie')
     }, restante)
-    return () => window.clearTimeout(id)
-  }, [fin, detalle])
+    // aviso suave a 3 segundos del final
+    const id3 = restante > 4000 && conSonido ? window.setTimeout(() => { if (document.visibilityState === 'visible') sonarAviso() }, restante - 3000) : 0
+    return () => { window.clearTimeout(id); if (id3) window.clearTimeout(id3) }
+  }, [fin, detalle, conSonido])
 
   if (!fin) return null
   const restante = Math.max(0, Math.round((fin - ahora) / 1000))
