@@ -1,6 +1,6 @@
 import { db } from './db'
 import * as repo from './repo'
-import { bajarBackup, subirBackup, usuarioActual } from './backup-supabase'
+import { asegurarCuentaAutomatica, bajarBackup, subirBackup, usuarioActual } from './backup-supabase'
 import type { Respaldo } from './exportar'
 
 const HORAS_ENTRE_BACKUPS = 20
@@ -12,9 +12,10 @@ const HORAS_ENTRE_BACKUPS = 20
  */
 export async function alIniciar(): Promise<{ ofrecer: Respaldo | null }> {
   try {
-    const u = await usuarioActual()
-    if (!u) return { ofrecer: null }
+    let u = await usuarioActual()
     const locales = await db.sesiones.where('estado').equals('terminada').count()
+    if (!u && locales > 0 && (await asegurarCuentaAutomatica())) u = await usuarioActual()
+    if (!u) return { ofrecer: null }
     if (locales === 0) {
       const r = await bajarBackup()
       const remotas = (r?.tablas.sesiones as { estado?: string }[] | undefined)?.filter((s) => s.estado === 'terminada').length ?? 0

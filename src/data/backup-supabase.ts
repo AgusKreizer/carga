@@ -161,9 +161,59 @@ export async function restaurarDesdeNube(): Promise<boolean> {
 }
 
 /** Backup silencioso si hay configuración y sesión. Nunca lanza. */
+// ---------- Respaldo automático con código (sin mail) ----------
+// La cuenta se crea sola con un mail interno derivado del código; nunca se manda un mail.
+const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+export function generarCodigo(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  const c = Array.from(bytes, (b) => ALFABETO[b % ALFABETO.length]).join('')
+  return `${c.slice(0, 4)}-${c.slice(4, 8)}-${c.slice(8, 12)}-${c.slice(12, 16)}`
+}
+
+export function normalizarCodigo(c: string): string {
+  const limpio = c.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return limpio.length === 16 ? `${limpio.slice(0, 4)}-${limpio.slice(4, 8)}-${limpio.slice(8, 12)}-${limpio.slice(12, 16)}` : ''
+}
+
+function credenciales(codigo: string) {
+  const limpio = codigo.replace(/-/g, '').toLowerCase()
+  return { email: `r-${limpio}@respaldo.carga.app`, password: `carga-${limpio}` }
+}
+
+export async function entrarConCodigo(codigo: string): Promise<void> {
+  const sb = await clienteSupabase()
+  if (!sb) throw new Error('Supabase no está configurado.')
+  const n = normalizarCodigo(codigo)
+  if (!n) throw new Error('El código tiene 16 letras y números, por ejemplo ABCD-EFGH-JKLM-NPQR.')
+  const { error } = await sb.auth.signInWithPassword(credenciales(n))
+  if (error) throw new Error(/invalid login/i.test(error.message) ? 'Ese código no existe. Revisalo letra por letra.' : error.message)
+  await repo.guardarAjustes({ codigoRespaldo: n, codigoGuardado: true })
+}
+
+/** Si no hay sesión en la nube, crea (o reusa) la cuenta del código de este dispositivo. */
+export async function asegurarCuentaAutomatica(): Promise<boolean> {
+  const sb = await clienteSupabase()
+  if (!sb) return false
+  if (await usuarioActual()) return true
+  const a = await repo.ajustes()
+  const codigo = a.codigoRespaldo ?? generarCodigo()
+  if (!a.codigoRespaldo) await repo.guardarAjustes({ codigoRespaldo: codigo, codigoGuardado: false })
+  const cred = credenciales(codigo)
+  const ingreso = await sb.auth.signInWithPassword(cred)
+  if (!ingreso.error) return true
+  const alta = await sb.auth.signUp(cred)
+  if (alta.error) throw alta.error
+  if (!alta.data.session) {
+    const reintento = await sb.auth.signInWithPassword(cred)
+    if (reintento.error) throw reintento.error
+  }
+  return true
+}
+
 export async function respaldarSiCorresponde(): Promise<void> {
   try {
-    const u = await usuarioActual()
+    const u = (await usuarioActual()) ?? ((await asegurarCuentaAutomatica()) ? await usuarioActual() : null)
     if (!u) return
     await subirBackup()
   } catch {

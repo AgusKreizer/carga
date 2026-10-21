@@ -183,7 +183,7 @@ export function TarjetaEjercicio({ linea, ejercicio, objetivo, ultima, series: t
                 </div>
               </div>
               <div>
-                <div className="mb-1 text-[11px] text-texto-3">RIR real <span className="text-texto-3">(objetivo {rirObjetivo})</span></div>
+                <div className="mb-1 text-[11px] text-texto-3">¿Cuántas reps más podías hacer? <span className="text-texto-2">(objetivo: {rirObjetivo === 0 ? "hasta el fallo" : rirObjetivo})</span></div>
                 <SelectorRir valor={rir} objetivo={rirObjetivo} onCambio={setRir} />
               </div>
               <button type="button" className="btn-grande" disabled={carga == null || guardando} onClick={confirmar}>

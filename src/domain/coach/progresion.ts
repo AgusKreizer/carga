@@ -37,7 +37,7 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
     return {
       ...base,
       series: repetir(linea.series, { carga: null, reps: linea.repsMin }),
-      porQue: `Primera vez: elegí una carga que te deje en RIR ${linea.rir} al llegar a ${linea.repsMin} reps.`,
+      porQue: `Primera vez con este ejercicio. Elegí un peso con el que llegues a ${linea.repsMin} reps ${sobra(linea.rir)}. La próxima vez te digo cuánto poner.`,
     }
   }
 
@@ -49,7 +49,7 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
       ...base,
       rir: 4,
       series: repetir(Math.max(1, Math.ceil(linea.series / 2)), { carga: cargaBase, reps: linea.repsMin }),
-      porQue: 'Semana de descarga: mitad de series, misma carga, lejos del fallo (RIR 4).',
+      porQue: `Semana liviana para recuperarte: mismo peso (${formatInc(cargaBase)} kg), la mitad de series, y terminá cada serie sintiendo que podías hacer 4 reps más.`,
     }
   }
 
@@ -58,7 +58,7 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
     return {
       ...base,
       series: repetir(linea.series, { carga, reps: linea.repsMin }),
-      porQue: `Pasaron ${diasDesdeUltima} días sin este ejercicio: arrancá un 8% más liviano y volvé a subir.`,
+      porQue: `Hace ${diasDesdeUltima} días que no hacés este ejercicio: hoy usá ${formatInc(carga)} kg, un poco menos que la última vez (${formatInc(cargaBase)} kg). En las próximas sesiones volvés a subir.`,
     }
   }
 
@@ -76,8 +76,8 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
       subeCarga: true,
       series: repetir(linea.series, { carga, reps: linea.repsMin }),
       porQue: salto > 1
-        ? `Llegaste a ${linea.repsMax} en todas y ${motivoSalto ?? 'el objetivo venía conservador'}: salto doble, +${formatInc(incReal)} kg y volvés a ${linea.repsMin}.`
-        : `Llegaste a ${linea.repsMax} en las ${linea.series} series con RIR ${linea.rir} o más: +${formatInc(inc)} kg y volvés a ${linea.repsMin}.`,
+        ? `Subí a ${formatInc(carga)} kg (+${formatInc(incReal)}, salto doble). La vez pasada hiciste ${linea.repsMax} reps en todas las series y ${motivoSalto ?? 'te venía sobrando'}. Hoy apuntá a ${linea.repsMin} reps por serie.`
+        : `Subí a ${formatInc(carga)} kg (+${formatInc(inc)}). La vez pasada hiciste ${linea.repsMax} reps en todas las series sin llegar al límite. Hoy apuntá a ${linea.repsMin} reps por serie: es normal que cueste más.`,
     }
   }
 
@@ -85,7 +85,7 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
     return {
       ...base,
       series: repetir(linea.series, { carga: cargaBase, reps: linea.repsMax }),
-      porQue: `Llegaste al tope del rango pero falta el RIR de alguna serie. Cargalo hoy: si fue RIR ${linea.rir} o más, la próxima subimos.`,
+      porQue: `Mismo peso: ${formatInc(cargaBase)} kg. La vez pasada llegaste a ${linea.repsMax} reps, pero en alguna serie no anotaste cuántas reps te sobraban (RIR). Hoy anotalo: si te sobró al menos ${linea.rir}, la próxima vez sube el peso.`,
     }
   }
 
@@ -94,7 +94,7 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
     return {
       ...base,
       series: repetir(linea.series, { carga, reps: linea.repsMin }),
-      porQue: `No llegaste al mínimo del rango (${linea.repsMin}) con el esfuerzo previsto: bajá ${formatInc(inc)} kg y recuperá reps.`,
+      porQue: `Bajá a ${formatInc(carga)} kg (−${formatInc(inc)}). La vez pasada no llegaste a ${linea.repsMin} reps en alguna serie: con un poco menos de peso vas a hacer las reps que pide el rango (${linea.repsMin}–${linea.repsMax}).`,
     }
   }
 
@@ -119,8 +119,8 @@ export function objetivoParaHoy(ctx: ContextoProgresion): ObjetivoEjercicio {
     series,
     porQue:
       idxFloja >= 0
-        ? `Misma carga. Buscá ${series[idxFloja].reps} en la serie ${idxFloja + 1}; cuando todas lleguen a ${linea.repsMax}, subimos.`
-        : `Misma carga: repetí ${linea.repsMax} en todas con RIR ${linea.rir} y la próxima subimos.`,
+        ? `Mismo peso: ${formatInc(cargaBase)} kg. Hoy intentá 1 rep más en la serie ${idxFloja + 1} (${(series[idxFloja].reps ?? 1) - 1} → ${series[idxFloja].reps}); las demás, igual que la vez pasada. Cuando hagas ${linea.repsMax} reps en todas, sube el peso.`
+        : `Mismo peso: ${formatInc(cargaBase)} kg. Hacé ${linea.repsMax} reps en todas las series ${sobra(linea.rir)} y la próxima vez sube el peso.`,
   }
 }
 
@@ -141,6 +141,12 @@ export function cargaTipica(series: SerieLog[]): number {
 
 function repetir(n: number, s: ObjetivoSerie): ObjetivoSerie[] {
   return Array.from({ length: n }, () => ({ ...s }))
+}
+
+/** RIR en palabras: "sintiendo que te queda 1 rep más". */
+function sobra(rir: number): string {
+  if (rir <= 0) return 'hasta no poder hacer una más'
+  return `sintiendo que te ${rir === 1 ? 'queda 1 rep' : `quedan ${rir} reps`} más (RIR ${rir})`
 }
 
 function formatInc(n: number): string {

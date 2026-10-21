@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as repo from '../../data/repo'
 import { descargarJSON, descargarTexto, exportarCSV, exportarTodo, restaurarTodo, validarRespaldo } from '../../data/exportar'
-import { bajarBackup, cerrarSesionNube, crearCuenta, definirClave, entrar, entrarConLink, enviarRecuperacion, subirBackup, usuarioActual } from '../../data/backup-supabase'
+import { asegurarCuentaAutomatica, bajarBackup, entrarConCodigo, subirBackup, usuarioActual } from '../../data/backup-supabase'
 import { useAjustes } from '../hooks'
 import { MUSCULOS, type MusculoId } from '../../domain/types'
 import { Stepper } from '../componentes/basicos'
@@ -14,10 +14,7 @@ export function Ajustes() {
   const a = useAjustes()
   const [msg, setMsg] = useState<string | null>(null)
   const [usuario, setUsuario] = useState<{ email: string | null } | null>(null)
-  const [email, setEmail] = useState('')
-  const [clave, setClave] = useState('')
-  const [esperandoConfirmacion, setEsperandoConfirmacion] = useState(false)
-  const [linkPegado, setLinkPegado] = useState('')
+  const [codigoIn, setCodigoIn] = useState('')
   const archivo = useRef<HTMLInputElement>(null)
 
   useEffect(() => { usuarioActual().then(setUsuario).catch(() => setUsuario(null)) }, [a?.supabaseUrl, a?.supabaseAnonKey])
@@ -100,72 +97,53 @@ export function Ajustes() {
         <p className="text-[11px] text-texto-3">El historial es lo más valioso. Exportá cada tanto aunque uses la nube.</p>
       </Seccion>
 
-      <Seccion titulo="Nube (Supabase)">
-        <input defaultValue={a.supabaseUrl} placeholder="https://xxxx.supabase.co" onBlur={(e) => repo.guardarAjustes({ supabaseUrl: e.target.value.trim() })} className={input} />
-        <input defaultValue={a.supabaseAnonKey} placeholder="anon key" onBlur={(e) => repo.guardarAjustes({ supabaseAnonKey: e.target.value.trim() })} className={input} />
-        {a.supabaseUrl && a.supabaseAnonKey && !usuario && (
-          <div className="space-y-2">
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@mail.com" type="email" inputMode="email" autoCapitalize="none" autoComplete="email" className={input} />
-            <input value={clave} onChange={(e) => setClave(e.target.value)} placeholder="Contraseña (mínimo 6)" type="password" autoComplete="current-password" className={input} />
-            <div className="flex gap-2">
-              <button type="button" className="btn-secundario flex-1 bg-acento text-black" disabled={!email.includes('@') || clave.length < 6} onClick={async () => {
-                try { await entrar(email, clave); const u = await usuarioActual(); setUsuario(u); setClave(''); await subirBackup(); aviso('Conectado. Respaldo subido.') } catch (e) { aviso((e as Error).message) }
-              }}>Entrar</button>
-              <button type="button" className="btn-secundario flex-1" disabled={!email.includes('@') || clave.length < 6} onClick={async () => {
-                try {
-                  const r = await crearCuenta(email, clave)
-                  if (r === 'conectado') { const u = await usuarioActual(); setUsuario(u); setClave(''); await subirBackup(); aviso('Cuenta creada y respaldo subido.') }
-                  else { setEsperandoConfirmacion(true); aviso('Revisá el mail y tocá el link de confirmación.') }
-                } catch (e) { aviso((e as Error).message) }
-              }}>Crear cuenta</button>
-            </div>
-            {esperandoConfirmacion && (
-              <p className="rounded-xl bg-aviso/10 px-3 py-2 text-xs text-texto">Te llegó un mail de confirmación. Tocá el link (puede abrirse en Safari, no importa), volvé a Carga y tocá <b>Entrar</b> con el mismo mail y contraseña.</p>
-            )}
-            <button type="button" className="w-full py-1 text-center text-sm text-acento" disabled={!email.includes('@')} onClick={async () => {
-              try { await enviarRecuperacion(email); aviso('Te mandamos un mail para elegir la contraseña. Revisá también spam.') } catch (e) { aviso((e as Error).message) }
-            }}>Crear o recuperar contraseña</button>
-            <div className="space-y-2 rounded-xl border border-borde p-3">
-              <div className="text-xs text-texto-2"><b>¿Te llegó el mail de Supabase?</b> No toques el link: mantenelo apretado → <b>Copiar</b>, y pegalo acá.</div>
-              <div className="flex gap-2">
-                <input value={linkPegado} onChange={(e) => setLinkPegado(e.target.value)} placeholder="Pegá el link del mail" autoCapitalize="none" className={input} />
-                <button type="button" className="btn-secundario shrink-0 bg-acento text-black" disabled={!linkPegado.includes('token=')} onClick={async () => {
-                  try {
-                    await entrarConLink(linkPegado); setLinkPegado('')
-                    const u = await usuarioActual(); setUsuario(u)
-                    aviso('Conectado. Ahora elegí tu contraseña abajo y tocá Cambiar contraseña.')
-                    subirBackup().catch(() => {})
-                  } catch (e) { aviso((e as Error).message) }
-                }}>Usar link</button>
-              </div>
-            </div>
-            <p className="text-[11px] text-texto-3">Primera vez: Crear cuenta. Si el mail ya tiene cuenta o no te acordás la contraseña: escribí el mail y tocá "Crear o recuperar contraseña"; el link se abre en Safari, elegís la contraseña ahí y volvés a Carga a tocar Entrar.</p>
-          </div>
-        )}
-        {usuario && (
+      <Seccion titulo="Respaldo en la nube">
+        {usuario ? (
           <>
-            <div className="text-sm text-texto-2">Conectado como {usuario.email}. {a.ultimoBackup ? `Último backup ${haceCuanto(a.ultimoBackup)}.` : 'Sin backup todavía.'}</div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="h-2.5 w-2.5 rounded-full bg-ok" />
+              <span>Activo. {a.ultimoBackup ? `Último respaldo ${haceCuanto(a.ultimoBackup)}.` : 'Se sube al terminar tu próxima sesión.'}</span>
+            </div>
+            {a.codigoRespaldo && usuario.email?.endsWith('@respaldo.carga.app') && (
+              <div className="rounded-xl bg-superficie-2 p-3">
+                <div className="text-[11px] font-medium uppercase tracking-wider text-texto-3">Tu código de respaldo</div>
+                <div className="mt-1 select-all font-mono text-xl font-semibold tracking-wider">{a.codigoRespaldo}</div>
+                <div className="mt-1 text-xs text-texto-2">Con este código recuperás todo en otro teléfono. Sacale una captura o guardalo en Notas.</div>
+                <button type="button" className="btn-secundario mt-2 w-full" onClick={async () => { try { await navigator.clipboard.writeText(a.codigoRespaldo!); await repo.guardarAjustes({ codigoGuardado: true }); aviso('Código copiado.') } catch { aviso('Mantené apretado el código para copiarlo.') } }}>Copiar código</button>
+              </div>
+            )}
+            {usuario.email && !usuario.email.endsWith('@respaldo.carga.app') && <div className="text-xs text-texto-2">Cuenta: {usuario.email}</div>}
             <div className="flex gap-2">
-              <button type="button" className="btn-secundario flex-1" onClick={async () => { try { await subirBackup(); aviso('Backup subido.') } catch (e) { aviso((e as Error).message) } }}>Subir ahora</button>
+              <button type="button" className="btn-secundario flex-1" onClick={async () => { try { await subirBackup(); aviso('Respaldo subido.') } catch (e) { aviso((e as Error).message) } }}>Subir ahora</button>
               <button type="button" className="btn-secundario flex-1" onClick={async () => {
                 try {
                   const r = await bajarBackup()
-                  if (!r) return aviso('No hay backup en la nube.')
-                  if (!confirm(`Reemplazar TODO lo local por el backup del ${r.fecha.slice(0, 10)}?`)) return
+                  if (!r) return aviso('No hay respaldo en la nube.')
+                  if (!confirm(`¿Reemplazar todo lo de este teléfono por el respaldo del ${r.fecha.slice(0, 10)}?`)) return
                   await restaurarTodo(r); location.reload()
                 } catch (e) { aviso((e as Error).message) }
-              }}>Restaurar de la nube</button>
+              }}>Traer de la nube</button>
             </div>
+          </>
+        ) : (
+          <>
+            <div className="text-sm text-texto-2">Se activa solo cuando terminás tu primera sesión. Si ya tenés un código de respaldo de otro teléfono, ponelo acá:</div>
             <div className="flex gap-2">
-              <input value={clave} onChange={(e) => setClave(e.target.value)} type="password" autoComplete="new-password" placeholder="Nueva contraseña (mínimo 6)" className={input} />
-              <button type="button" className="btn-secundario shrink-0" disabled={clave.length < 6} onClick={async () => {
-                try { await definirClave(clave); setClave(''); aviso('Contraseña guardada. Usala para Entrar en Carga desde cualquier lado.') } catch (e) { aviso((e as Error).message) }
-              }}>Cambiar contraseña</button>
+              <input value={codigoIn} onChange={(e) => setCodigoIn(e.target.value.toUpperCase())} placeholder="ABCD-EFGH-JKLM-NPQR" autoCapitalize="characters" className={`${input} font-mono tracking-wider`} />
+              <button type="button" className="btn-secundario shrink-0 bg-acento text-black" disabled={codigoIn.replace(/[^A-Za-z0-9]/g, '').length !== 16} onClick={async () => {
+                try {
+                  await entrarConCodigo(codigoIn); const u = await usuarioActual(); setUsuario(u); setCodigoIn('')
+                  const r = await bajarBackup()
+                  if (r && confirm(`Encontré tu respaldo del ${r.fecha.slice(0, 10)}. ¿Lo traigo a este teléfono?`)) { await restaurarTodo(r); location.reload() }
+                  else aviso('Conectado.')
+                } catch (e) { aviso((e as Error).message) }
+              }}>Recuperar</button>
             </div>
-            <button type="button" className="w-full py-1 text-sm text-texto-3" onClick={async () => { await cerrarSesionNube(); setUsuario(null) }}>Cerrar sesión</button>
+            <button type="button" className="btn-secundario w-full" onClick={async () => {
+              try { if (await asegurarCuentaAutomatica()) { setUsuario(await usuarioActual()); await subirBackup().catch(() => {}); aviso('Respaldo activado.') } } catch (e) { aviso((e as Error).message) }
+            }}>Activar respaldo ahora</button>
           </>
         )}
-        <p className="text-[11px] text-texto-3">Se sube un respaldo completo al terminar cada sesión. El SQL para crear la tabla está en docs/supabase.sql.</p>
       </Seccion>
 
       <Seccion titulo="Créditos">
